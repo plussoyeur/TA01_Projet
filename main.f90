@@ -13,6 +13,7 @@ program main
   real(kind=8)       :: erreur
   real(kind=8), dimension(:), pointer :: residu
   logical            :: conv   ! Indique s'il y a eu convergence pour les methodes iteratives
+  integer            :: nbSsDomains
 
 
   write(*,*)
@@ -26,8 +27,9 @@ program main
   write(*,*) '-----------------------------------------'
   write(*,*) 'Proprietes du maillage :'
 
+  nbSsDomains = 2
   ! lecture du maillage
-  mail = loadFromMshFile("./testpart.msh")
+  mail = loadFromMshFile("./testpart.msh", nbSsDomains)
   ! construction des donnees sur les triangles
   call getTriangles(mail)
   ! creation du probleme
