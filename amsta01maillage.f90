@@ -45,7 +45,7 @@ module amsta01maillage
 
       ! déclaration des variables
       character(len=*), intent(in)   :: filename
-      integer, intent(in)           :: nbSsDomains
+      integer, intent(in)            :: nbSsDomains
       type(maillage)                 :: res
       integer                        :: ios, ibuf, ibufD, ibufT, i, j, nbtags
       character(len=100)             :: sbuf, sbuf2, sbuf3
@@ -115,17 +115,19 @@ module amsta01maillage
 
                ! association éléments / sous-domaines auxquels il appartient
                do j = 1, elemData(6)
-                  res%elemsPartRef(i,j) = elemData(6+j)
+                  res%elemsPartRef(i,j) = elemData(6+j) 
                end do
+
 
                ! management of tags (domain ref of element and eventually partition data)
                nbtags=elemData(3)
                res%refElems(i)=elemData(4)
-               ! read vertices of element
 
+               ! read vertices of element
                do j=1,res%typeElems(i,2)
                   res%elemsVertices(i,j)=elemData(nbtags+3+j)
                end do
+
 
                ! set reference of vertices
                do j=1,res%typeElems(i,2)
@@ -136,6 +138,21 @@ module amsta01maillage
 
                end do
 
+               ! affectation des noeuds à un domaine et teste de leur appartenance à plusieurs domaines
+               ! 1 -> noeud du bord; 2 -> noeud de l'intérieur; -7 -> noeud d'une interface; -3 -> noeud interface inter bord
+               res%RefPartNodes = 0
+               do j = 1,res%typeElems(i,2)
+                  if(res%RefPartNodes(res%elemsVertices(i,j)) == 0) then
+                     res%RefPartNodes(res%elemsVertices(i,j)) = elemData(7)
+                  else
+                     if(res%refNodes(res%elemsVertices(i,j)) == 1) then 
+                        res%refNodes(res%elemsVertices(i,j)) = -3
+                     else
+                        res%refNodes(res%elemsVertices(i,j)) = -7
+                     end if
+                  end if
+               end do
+               
                deallocate(elemData)
 
             end do
