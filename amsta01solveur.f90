@@ -33,20 +33,19 @@ module amsta01solveur
     ! on définit la convergence à faux au départ
     conv = .FALSE.
 
-    ! on prend la taille du problème à résoudre (avec élimination) 
+    ! on prend la taille du problème à résoudre (avec élimination)
     n_size = size(pb%felim)
 
     ! on alloue les vecteurs itérés au rang k de la solution et du résidu
     allocate(uk(n_size), rk(n_size))
 
     ! Definition des matrices M_inv et N
-    N = (-1.d0) * pb%p_Kelim    ! Attention on a K = M - N (spcopy -> =; spscalmat -> *)
+    N = (-1.d0) * extract(pb%p_Kelim, pb%p_Kelim%i /= pb%p_Kelim%j)    ! Attention on a K = M - N (spcopy -> =; spscalmat -> *)
     call sparse(M_inv, n_size, n_size)
 
-    ! Remplissage et suppresion de M_inv et N 
+    ! Remplissage et suppresion de M_inv et N
     do i = 1, n_size
-       call setcoeff(M_inv, i, i,  (1.d0)/(coeff(pb%p_Kelim, i, i))) 
-       call delcoeff(N,i,i)
+       call setcoeff(M_inv, i, i,  (1.d0)/(coeff(pb%p_Kelim, i, i)))
     end do
 
 
@@ -54,7 +53,7 @@ module amsta01solveur
     uk = 1.d0
     do k = 1, 1000 ! Pour ne pas avoir de boucle infinie (on pourrait optimiser ce critère sachant que k <= n_size ?)
 
-       ! calcul de l'itéré kieme de la solution 
+       ! calcul de l'itéré kieme de la solution
        uk = M_inv * (N * uk) + M_inv * pb%felim    ! spmatvec -> *
 
        ! calcul du résidu
@@ -67,7 +66,7 @@ module amsta01solveur
           write(*,*)
           write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
           write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Jacobi'
-          exit 
+          exit
        end if
 
     end do
@@ -77,20 +76,19 @@ module amsta01solveur
 
     ! désallocation des matrices crées
     deallocate(uk, rk)
-    
+
   end subroutine solveJacobi
 
 
 
 
-  
   ! calcul de la solution du probleme par Gauss Seidel
   ! on veut resoudre AX = B avec A = M - N où A triang inf et N triang strict sup
   subroutine solveGaussSeidel(pb, eps, conv)
-    
+
     ! variables d'entrée du problème et de sortie
     type(probleme), intent(inout)     :: pb     ! probleme que l'on veut resoudre
-    real(kind=8), intent(in)          :: eps    ! critere de convergence
+    real, intent(in)          :: eps    ! critere de convergence
     logical, intent(out)              :: conv   ! variable logique pour tester la convergence
 
 
@@ -111,11 +109,33 @@ module amsta01solveur
     ! définition des matrices M_inv et N
     call sparse(M_inv, n_size, n_size)
     call sparse(N, n_size, n_size)
-    
-    N = -1.d0 * extract(pb%p_Kelim, pb%p_Kelim%i < pb%p_Kelim%j)
+
+    N = (-1.d0) * extract(pb%p_Kelim, pb%p_Kelim%i < pb%p_Kelim%j)
     M_inv = extract(pb%p_Kelim, pb%p_Kelim%i >= pb%p_Kelim%j)
-    
-    
+
+    ! algo de descente pour le calcul de uk
+    ! Initialisation du vecteur solution et boucle
+    uk = 1.d0
+    do k = 1, 1000 ! Pour ne pas avoir de boucle infinie (on pourrait optimiser ce critère sachant que k <= n_size ?)
+
+       ! calcul de l'itéré kieme de la solution
+       uk = (N * uk) + pb%felim    ! spmatvec -> *
+       uk = downSolve(M_inv, uk)
+       ! calcul du résidu
+       rk = pb%felim - pb%p_Kelim * uk         ! spmatvec -> *
+       norm = dsqrt(dot_product(rk,rk))
+
+       ! sortie de la boucle si on a atteint la convergence
+       if(norm < eps) then
+          conv = .TRUE.
+          write(*,*)
+          write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
+          write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss-Seidel'
+          exit
+       end if
+
+    end do
+
   end subroutine solveGaussSeidel
 
 
@@ -126,5 +146,4 @@ module amsta01solveur
 
 
 
-  
 end module amsta01solveur

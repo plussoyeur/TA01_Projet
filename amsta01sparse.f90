@@ -34,6 +34,9 @@ module amsta01sparse
     module procedure spscalmat,spmatscal,spmatvec,spmatmat
   end interface
   contains
+
+
+
     ! initialisation d'une matrice
     !     a : matrice
     !     n : nombre de lignes
@@ -53,6 +56,10 @@ module amsta01sparse
         a%isAllocated=.true.
       end if
     end subroutine sparse
+
+
+
+
     ! allocation d'une matrice non allouee
     subroutine msallocate(a,nnz)
       type(matsparse), intent(inout) :: a
@@ -63,6 +70,10 @@ module amsta01sparse
       allocate(a%i(nnz),a%j(nnz),a%val(nnz))
       a%isAllocated=.true.
     end subroutine msallocate
+
+
+
+
     ! desaloccation d'une matrice
     subroutine msdeallocate(a)
       type(matsparse), intent(inout) :: a
@@ -73,6 +84,10 @@ module amsta01sparse
       deallocate(a%i,a%j,a%val)
       a%isAllocated=.false.
     end subroutine msdeallocate
+
+
+
+
     ! reallocation d'une matrice
     subroutine msreallocate(a,nnz)
       type(matsparse), intent(inout) :: a
@@ -84,6 +99,10 @@ module amsta01sparse
       allocate(a%i(nnz),a%j(nnz),a%val(nnz))
       a%isAllocated=.true.
     end subroutine msreallocate
+
+
+
+
     ! fonction de modification/insertion d'un coefficient
     !     si la matrice est vide, elle contient cet unique coefficient
     !     sinon, soit on ecrase le coefficient s'il existe, soit on le cree
@@ -147,6 +166,11 @@ module amsta01sparse
         end if
       end if
     end subroutine setcoeff
+
+
+
+
+
     ! fonction d'ajout d'une valeur a un coefficient
     !     si la matrice est vide, elle contient cet unique coefficient
     subroutine addtocoeff(a, i, j, val)
@@ -209,6 +233,10 @@ module amsta01sparse
         end if
       end if
     end subroutine addtocoeff
+
+
+
+
     ! fonction de multiplication d'un coefficient par une valeur
     subroutine multcoeff(a, i, j, val)
       implicit none
@@ -270,6 +298,10 @@ module amsta01sparse
         end if
       end if
     end subroutine multcoeff
+
+
+
+
     ! fonction de suppresion d'un coefficient
     subroutine delcoeff(a, i, j)
       implicit none
@@ -281,14 +313,14 @@ module amsta01sparse
       integer :: nnz, ind
 
       if (i>a%n) then
-        stop "ERROR in setcoeff: row index out of bounds" 
+        stop "ERROR in setcoeff: row index out of bounds"
       end if
       if (j>a%m) then
         stop "ERROR in setcoeff: column index out of bounds"
       end if
 
       if (a%isAllocated.eqv..false.) then
-        return 
+        return
       end if
 
       if (size(a%i) /= size(a%j)) then
@@ -320,6 +352,9 @@ module amsta01sparse
         deallocate(itmp,jtmp,vtmp)
       end if
     end subroutine delcoeff
+
+
+
     ! fonction de recuperation d'un coefficient
     function coeff(a, i, j) result(val)
       type(matsparse), intent(in) :: a
@@ -334,6 +369,10 @@ module amsta01sparse
         val=0.d0
       end if
     end function coeff
+
+
+
+
     ! fonction de definition de la taille de la matrice
     subroutine setsize(a,n,m)
       type(matsparse), intent(inout) :: a
@@ -341,6 +380,10 @@ module amsta01sparse
       a%n=n
       a%m=m
     end subroutine setsize
+
+
+
+
     ! fonction d'affichage d'une matrice
     subroutine affiche(a)
       implicit none
@@ -371,6 +414,10 @@ module amsta01sparse
       end if
       a%isAllocated=b%isAllocated
     end subroutine spcopy
+
+
+
+
     ! fonction d'affectation de valeur a tous les coefficients d'une matrice
     subroutine spaffect(a,b)
       implicit none
@@ -399,6 +446,10 @@ module amsta01sparse
         end if
       end do
     end function findpos
+
+
+
+
     ! recherche des coefficients correspondant a un critere
     function findind(a, mask) result(ind)
       implicit none
@@ -416,6 +467,10 @@ module amsta01sparse
       allocate(ind(m))
       ind=pack((/(k,k=1,nnz)/),mask)
     end function findind
+
+
+
+
     ! extrait les coefficients ayant une certaine valeur
     ! permet par exemple de ne recuperer que les coefficients reellement non nuls
     function extract(a,mask) result(b)
@@ -435,6 +490,10 @@ module amsta01sparse
       b%j=pack(a%j,mask)
       b%val=pack(a%val,mask)
     end function extract
+
+
+
+
     ! tri d'une matrice
     subroutine sort(a, sens)
       implicit none
@@ -477,6 +536,10 @@ module amsta01sparse
         if (ok) exit
       end do
     end subroutine sort
+
+
+
+
     ! transposition d'une matrice
     function sptranspose(a) result(b)
       type(matsparse), intent(in) :: a
@@ -488,6 +551,10 @@ module amsta01sparse
       b%val=a%val
       call sort(b)
     end function sptranspose
+
+
+
+
     ! addition de deux matrices (standard)
     function spadd(a,b) result(c)
       implicit none
@@ -551,6 +618,11 @@ module amsta01sparse
       c%val=tmp%val(1:nnz-1)
       deallocate(tmp%i,tmp%j,tmp%val)
     end function spadd
+
+
+
+
+
     ! addition de deux matrices (par tri et fusion)
     function spadd2(a,b) result (c)
       implicit none
@@ -597,6 +669,10 @@ module amsta01sparse
       c%val=pack(tmp%val,mask)
       deallocate(mask,tmp%i,tmp%j,tmp%val)
     end function spadd2
+
+
+
+
     ! addition de deux matrices pre-triees
     function spaddsort(a,b) result(c)
       implicit none
@@ -653,7 +729,6 @@ module amsta01sparse
           nnz=nnz+1
         end if
       end do
-      
       ! traitement final derniers elements si positionne a un endroit different
       if(l <= nnzb) then
         do i=l,nnzb
@@ -680,6 +755,10 @@ module amsta01sparse
       c%val=tmp%val(1:nnz-1)
       deallocate(tmp%i,tmp%j,tmp%val)
     end function spaddsort
+
+
+
+
     ! soustraction de deux matrices
     function spminus(a,b) result (c)
       implicit none
@@ -722,6 +801,10 @@ module amsta01sparse
       c%val=pack(tmp%val,mask)
       deallocate(mask,tmp%i,tmp%j,tmp%val)
     end function spminus
+
+
+
+
     ! effectue le produit d'une matrice par un scalaire
     function spscalmat(a,b) result(c)
       implicit none
@@ -757,6 +840,10 @@ module amsta01sparse
       c%j=a%j
       c%val=b*a%val
     end function spmatscal
+
+
+
+
     ! effectue le produit d'une matrice par un vecteur
     function spmatvec(a,b) result(u)
       implicit none
@@ -774,6 +861,10 @@ module amsta01sparse
         u(a%i(i))=u(a%i(i))+a%val(i)*b(a%j(i))
       end do
     end function spmatvec
+
+
+
+
     ! effectue le produit d'une matrice par une matrice
     function spmatmat(a,b) result(u)
       implicit none
@@ -810,6 +901,10 @@ module amsta01sparse
       u=extract(tmp,tmp%val/=0.d0)
       deallocate(tmp%i,tmp%j,tmp%val)
     end function spmatmat
+
+
+
+
     ! lufact - calcule factorisation LU: A=L*U
     subroutine lufact(A, L, U, klo, kuo)
       implicit none
@@ -918,6 +1013,10 @@ module amsta01sparse
       deallocate(Ltmp%i,Ltmp%j,Ltmp%val)
       deallocate(Utmp%i,Utmp%j,Utmp%val)
     end subroutine lufact
+
+
+
+
     ! lusolve - resout le systeme L*U x = f par L*y=f puis U*x=y
     subroutine lusolve(L,U,f,x,klo,kuo)
       implicit none
@@ -984,6 +1083,41 @@ module amsta01sparse
       a%val=1.d0
     end function speye
     ! routine de test
+
+
+    ! fonction de descente pour une matrice triangulaire inférieure
+    function downSolve(L,y) result(x)
+
+      implicit none
+
+      type(matsparse), intent(in)                        :: L
+      real(kind=8), dimension(:), intent(in)             :: y
+      real(kind=8), dimension(size(y))                   :: x
+      integer :: i, kl, nl, n, ind, j
+
+      ! taille pour la résolution
+      n = size(y)
+
+      ! resolution de L*x=y
+      do i=1,n
+        x(i)=y(i)
+        do j=1,i-1
+          ind=find(L,i,j)
+          if(ind/=0) then
+            x(i)=x(i)-L%val(ind)*x(j)
+          end if
+        end do
+        ind = find(L, i, i)
+        if( L%val(ind) /= 0) then
+           x(i) = x(i)/L%val(ind)
+        else
+           write(*,*) "ERROR : la matrice n'est pas inversible"
+        end if
+     end do
+
+    end function downSolve
+
+
     subroutine test_amsta01sparse()
       type(matsparse) :: mat, mat2, mat3, mat4, mat5, mat6, mat7, mat8, L, U, res
       integer, parameter :: n=10
