@@ -1,0 +1,83 @@
+!-----------------------------------------------------------------------------
+! module de résolution du problème de laplacien par éléments avec Jacobi et Gauss-Sield
+! Auteur : Emeriau PE
+!-----------------------------------------------------------------------------
+
+module amsta01solveur
+
+  use amsta01maillage
+  use amsta01sparse
+  use amsta01probleme
+
+  contains
+  ! calcul de la solution du probleme par Jacobi
+  ! on veut resoudre AX = B avec A = M - N où A diag et N tradiag à diag vide
+  
+  subroutine solveJacobi(pb, eps, conv)
+
+    implicit none
+
+
+    ! variables d'entrée et de sortie du problème
+    type(probleme), intent(inout)          :: pb     ! problème que l'on veut résoudre
+    real, intent(in)                       :: eps    ! critère de précision sur la convergence
+    logical, intent(out)                   :: conv   ! variable logique pour tester la convergence
+
+    ! variables locales
+    type(matsparse)                       :: N, M_inv    ! avec K=M-N
+    real(kind=8), dimension(:), pointer   :: uk, rk      ! itéré kieme de la solution et du résidu
+    real(kind = 8)                        :: norm        ! norme du résidu
+    integer                               :: n_size,i,k  ! taille vecteur solution, variables boucles
+    logical :: sortie
+
+    ! on définit la convergence à faux au départ
+    conv = .FALSE.
+
+    ! on prend la taille du problème à résoudre (avec élimination) 
+    n_size = size(pb%felim)
+
+    ! on alloue les vecteurs itérés au rang k de la solution et du résidu
+    allocate(uk(n_size), rk(n_size))
+
+    ! Definition des matrices M et N
+    call spcopy(N,spmatscal(-1.d0, pb%p_Kelim))    ! Attention on a K = M - N
+    call sparse(M_inv, n_size, n_size)
+
+    ! Remplissage et suppresion de M et N 
+    do i = 1, n_size
+       call setcoeff(M_inv, i, i,  (1.d0)/(coeff(pb%p_Kelim, i, i))) 
+       call delcoeff(N,i,i)
+    end do
+
+
+    ! Initialisation du vecteur solution et boucle
+    uk = 1.d0
+    do k = 1, 1000 ! Pour ne pas avoir de boucle infinie (on pourrait optimiser ce critère sachant que k <= n_size ?)
+
+       ! calcul de l'itéré kieme de la solution 
+       uk = spmatvec(M_inv,spmatvec(N,uk)) + spmatvec(M_inv,pb%felim)
+
+       ! calcul du résidu
+       rk = pb%felim - spmatvec(pb%p_Kelim,uk)
+       norm = dsqrt(dot_product(rk,rk))
+
+       ! sortie de la boucle si on a atteint la convergence
+       if(norm < eps) then
+          conv = .TRUE.
+          write(*,*)
+          write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
+          write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Jacobi'
+          exit 
+       end if
+
+    end do
+
+    ! la solution est la valeur du dernier itéré
+    pb%u = uk
+
+    ! désallocation des matrices crées
+    deallocate(uk, rk)
+    
+  end subroutine solveJacobi
+
+end module amsta01solveur
