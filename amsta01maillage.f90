@@ -102,6 +102,9 @@ module amsta01maillage
             allocate(res%typeElems(res%nbElems,2), res%refElems(res%nbElems), res%elemsVertices(res%nbElems,3))
             allocate(res%elemsPartRef(res%nbElems,nbSsDomains))
 
+            ! initialisation de RefPartNodes à 0 (! hors de la boucle)
+            res%refPartNodes = 0 
+            
             ! read elements data
             do i=1,res%nbElems
                ! We get each line in a character string
@@ -140,16 +143,19 @@ module amsta01maillage
 
                ! affectation des noeuds à un domaine et teste de leur appartenance à plusieurs domaines
                ! 1 -> noeud du bord; 2 -> noeud de l'intérieur; -7 -> noeud d'une interface; -3 -> noeud interface inter bord
-               res%RefPartNodes = 0
                do j = 1,res%typeElems(i,2)
+
+                  ! on teste si le noeud a déjà été lu et on l'attribue à un sous-domaine
                   if(res%RefPartNodes(res%elemsVertices(i,j)) == 0) then
                      res%RefPartNodes(res%elemsVertices(i,j)) = elemData(7)
-                  else
-                     if(res%refNodes(res%elemsVertices(i,j)) == 1) then 
-                        res%refNodes(res%elemsVertices(i,j)) = -3
-                     else
-                        res%refNodes(res%elemsVertices(i,j)) = -7
-                     end if
+
+                  ! on teste maintenant si le domaine lu est différent de celui enregistré
+                  else if(res%RefPartNodes(res%elemsVertices(i,j)) /= elemData(7)) then 
+                     ! S'il s'agit d'un noeud sur le bord on le met à -3
+                     if(res%refNodes(res%elemsVertices(i,j)) == 1) res%refNodes(res%elemsVertices(i,j)) = -3
+                     ! S'il s'agit d'un noeud du bord inter interface on le met à -7
+                     if (res%refNodes(res%elemsVertices(i,j)) >= 0) res%refNodes(res%elemsVertices(i,j)) = -7
+                     
                   end if
                end do
                
