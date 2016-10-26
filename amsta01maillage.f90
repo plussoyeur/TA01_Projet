@@ -4,6 +4,8 @@
 ! -----------------------------------------------------------------
 module amsta01maillage
 
+  implicit none
+
   ! classe maillage
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !
@@ -19,7 +21,7 @@ module amsta01maillage
   type maillage
     integer :: nbNodes, nbElems, nbTri
     real(kind=8), dimension(:,:), pointer :: coords
-    integer, dimension(:,:), pointer :: typeElems, elemsVertices, triVertices, elemsPartRef, triPartRef
+    integer, dimension(:,:), pointer :: typeElems, elemsVertices, triVertices, elemsPartRef, RefPartTri
     integer, dimension(:), pointer :: refNodes, refElems, refTri, elemsNbPart, triNbPart, RefPartNodes
   end type
 
@@ -61,6 +63,7 @@ module amsta01maillage
 
 
       do while (ios == 0)
+         write(*,*) "boucle while"
          ! lecture de la première ligne
          read(10,*, iostat=ios) sbuf
 
@@ -100,11 +103,11 @@ module amsta01maillage
             read(10,*, iostat=ios) res%nbElems
             print*, "nbElems=",res%nbElems
             allocate(res%typeElems(res%nbElems,2), res%refElems(res%nbElems), res%elemsVertices(res%nbElems,3))
-            allocate(res%elemsPartRef(res%nbElems,nbSsDomains))
+            allocate(res%elemsPartRef(res%nbElems,nbSsDomains), res%refPartNodes(res%nbNodes), res%elemsNbPart(res%nbElems))
 
             ! initialisation de RefPartNodes à 0 (! hors de la boucle)
-            res%refPartNodes = 0 
-            
+            res%refPartNodes = 0
+
             ! read elements data
             do i=1,res%nbElems
                ! We get each line in a character string
@@ -117,8 +120,9 @@ module amsta01maillage
                res%typeElems(i,2)=type2nbNodes(res%typeElems(i,1))
 
                ! association éléments / sous-domaines auxquels il appartient
-               do j = 1, elemData(6)
-                  res%elemsPartRef(i,j) = elemData(6+j) 
+               res%elemsNbPart(i) = elemdata(6)
+               do j = 1, res%elemsNbPart(i)
+                  res%elemsPartRef(i,j) = elemData(6+j)
                end do
 
 
@@ -150,15 +154,15 @@ module amsta01maillage
                      res%RefPartNodes(res%elemsVertices(i,j)) = elemData(7)
 
                   ! on teste maintenant si le domaine lu est différent de celui enregistré
-                  else if(res%RefPartNodes(res%elemsVertices(i,j)) /= elemData(7)) then 
+                  else if(res%RefPartNodes(res%elemsVertices(i,j)) /= elemData(7)) then
                      ! S'il s'agit d'un noeud sur le bord on le met à -3
                      if(res%refNodes(res%elemsVertices(i,j)) == 1) res%refNodes(res%elemsVertices(i,j)) = -3
                      ! S'il s'agit d'un noeud du bord inter interface on le met à -7
                      if (res%refNodes(res%elemsVertices(i,j)) >= 0) res%refNodes(res%elemsVertices(i,j)) = -7
-                     
+
                   end if
                end do
-               
+
                deallocate(elemData)
 
             end do
@@ -176,6 +180,12 @@ module amsta01maillage
 
       end do
 
+      do j = 1, res%nbNodes
+
+         if(res%refNodes(j) < 0) res%refPartNodes(j) = 0
+
+      end do
+
       close(10)
 
     end function
@@ -183,9 +193,13 @@ module amsta01maillage
 
 
     ! construit la liste des triangles du maillage
-    subroutine getTriangles(mail)
+    subroutine getTriangles(mail, nbSsDomains)
+
+      implicit none
+
       type(maillage), intent(inout) :: mail
-      integer :: i, j, nbTri
+      integer, intent(in)           :: nbSsDomains
+      integer                       :: i, j, nbTri
       nbTri=0
 
       do i=1, mail%nbElems
@@ -196,14 +210,45 @@ module amsta01maillage
       mail%nbTri=nbTri
       Print*, "NbTri=", NbTri
 
-      allocate(mail%refTri(nbTri), mail%triVertices(nbTri,3))
+      allocate(mail%refTri(nbTri), mail%triVertices(nbTri,3), mail%RefPartTri(nbTri,nbSsDomains), mail%triNbPart(nbTri))
       j=1
       do i=1, mail%nbElems
          if (mail%typeElems(i,1) == 2) then
             mail%refTri(j)=mail%refElems(i)
             mail%triVertices(j,1:3)=mail%elemsVertices(i,1:3)
+            mail%triNbPart(j) = mail%elemsNbPart(i)
+            mail%RefPartTri(j,1:mail%triNbPart(j)) = mail%elemsPartRef(i,1:mail%elemsNbPart(i))
             j=j+1
          end if
       end do
     end subroutine getTriangles
-  end module amsta01maillage
+
+
+  ! construction d'une subroutine de stockage des éléments des tableaux
+  subroutine affichePart(mail, filename)
+
+    implicit none
+
+    type(maillage), intent(in)     :: mail
+    character(len=*), intent(in)   :: filename
+    integer                        :: j
+
+    open(unit=17, file=filename, form='formatted')
+
+    ! stockage dans un fichier des informations associées aux noeuds
+    do j=1,mail%nbNodes
+       write(17,*) 'Noeud numero : ', j, ' | RefNodes : ', mail%refNodes(j), ' | RefPartNodes : ', mail%refPartNodes(j)
+    end do
+
+    ! affichage des informations associées aux triangles
+    !do j=1,mail%nbTri
+    !     write(*,*) 'Noeud numero : ', j, ' | RefNodes : ', mail%refTri(j), ' | RefPartNodes : ', mail%RefPartTri(j,:)
+    !end do
+
+
+    close(17)
+
+  end subroutine affichePart
+
+
+end module amsta01maillage

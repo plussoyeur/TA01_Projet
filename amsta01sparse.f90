@@ -788,7 +788,7 @@ module amsta01sparse
         iglob=(tmp%i(k-1)-1)*tmp%n + tmp%j(k-1)
         jglob=(tmp%i(k)-1)*tmp%n + tmp%j(k)
         if (iglob == jglob) then
-          tmp%val(k-1)=tmp%val(k-1)-tmp%val(k)
+          tmp%val(k-1)=tmp%val(k-1) + tmp%val(k)
           tmp%val(k)=0.d0
         end if
       end do

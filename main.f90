@@ -31,7 +31,9 @@ program main
   ! lecture du maillage
   mail = loadFromMshFile("./testpart.msh", nbSsDomains)
   ! construction des donnees sur les triangles
-  call getTriangles(mail)
+  call getTriangles(mail, nbSsDomains)
+  ! création du fichier résultat du maillage pour le tester
+  call affichePart(mail, "maillage.log")
   ! creation du probleme
   call loadFromMesh(pb,mail)
   ! assemblage des matrices elements finis
