@@ -1,4 +1,4 @@
-FC = gfortran
+FC = mpif90
 FFLAGS=
 
 SRCS	= main.f90

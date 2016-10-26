@@ -5,8 +5,12 @@ program main
   use amsta01probleme
   use amsta01solveur
 
+  use mpi
+
   implicit none
 
+
+  ! variables relatives à la définition du problème
   type(maillage)     :: mail
   type(probleme)     :: pb
   type(matsparse)    :: Kt, Mt
@@ -14,6 +18,17 @@ program main
   real(kind=8), dimension(:), pointer :: residu
   logical            :: conv   ! Indique s'il y a eu convergence pour les methodes iteratives
   integer            :: nbSsDomains
+
+  !variables relatives à l'utilisation de mpi
+  integer                                :: nbTask, myRank, ierr, request
+  integer, dimension(MPI_STATUS_SIZE)    :: status
+
+
+
+  ! initialisation MPI
+  call MPI_Init(ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, nbTask, ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, myRank, ierr)
 
 
   write(*,*)
@@ -31,7 +46,7 @@ program main
   ! lecture du maillage
   mail = loadFromMshFile("./testpart.msh", nbSsDomains)
   ! construction des donnees sur les triangles
-  call getTriangles(mail, nbSsDomains)
+  call getTriangles(mail, nbSsDomains, myRank)
   ! création du fichier résultat du maillage pour le tester
   call affichePart(mail, "maillage.log")
   ! creation du probleme
@@ -88,5 +103,8 @@ program main
 
   ! sauvegarde de la solution et de la solution theorique
   call saveToVtu(pb%mesh,pb%u,pb%uexa)
+
+
+call MPI_Finalize(ierr)
 
 end program
