@@ -11,16 +11,17 @@ program main
 
 
   ! variables relatives à la définition du problème
-  type(maillage)     :: mail
-  type(probleme)     :: pb
-  type(matsparse)    :: Kt, Mt
-  real(kind=8)       :: erreur
-  real(kind=8), dimension(:), pointer :: residu
-  logical            :: conv   ! Indique s'il y a eu convergence pour les methodes iteratives
-  integer            :: nbSsDomains
+  type(maillage)                       :: mail
+  type(probleme)                       :: pb
+  type(matsparse)                      :: Kt, Mt
+  real(kind=8)                         :: erreur
+  real(kind=8), dimension(:), pointer  :: residu
+  logical                              :: conv   ! Indique s'il y a eu convergence pour les methodes iterative
+  integer                              :: nbSsDomains
+  character(len=20)                    :: filename
 
   !variables relatives à l'utilisation de mpi
-  integer                                :: nbTask, myRank, ierr, request
+  integer                                :: nbTask, myRank, ierr, request, errcode
   integer, dimension(MPI_STATUS_SIZE)    :: status
 
 
@@ -35,24 +36,51 @@ program main
   write(*,*) '  **** TA01 Equation de la chaleur ****  '
 
 
+  filename = "testpart.msh"
+  write(*,*) trim("./nbSsDomains")//filename
+  open(unit=11, file=trim("./nbSsDomains")//filename, form='formatted')     
 
+  read(11,*) nbSsDomains
 
+  write(*,*)
+  write(*,*) '-----------------------------------------'
+  write(*,*) 'Nombre de sous-domaines du maillage lu grâce au script Python :'
+  write(*,*) nbSsDomains
+
+  ! erreur si le nombre de sous-domaines est différent de celui du nombre de processeurs
+  if(nbTask /= nbSsDomains) then
+     if(myRank == 0) then 
+        write(*,*) "___________________________________________________________________________________"
+        write(*,*) "ERROR : Le nombre de sous-domaines est différent du nombre de processeurs demandés"
+        write(*,*) "Le programme va s'arrêter"
+        write(*,*) "___________________________________________________________________________________"
+     end if
+     call MPI_Abort(MPI_COMM_WORLD,errcode,ierr)
+  end if
+
+  
 
   write(*,*)
   write(*,*) '-----------------------------------------'
   write(*,*) 'Proprietes du maillage :'
 
-  nbSsDomains = 2
   ! lecture du maillage
   mail = loadFromMshFile("./testpart.msh", nbSsDomains)
+  
   ! construction des donnees sur les triangles
-  call getTriangles(mail, nbSsDomains, myRank)
-  ! création du fichier résultat du maillage pour le tester
-  call affichePart(mail, "maillage.log")
+  call getTriangles(mail,  myRank, nbSsDomains)
+
+  ! Affichage des données des noeuds et des elements
+  if(myRank == 0) call affichePartNoeud(mail, "infoNoeuds.log")
+  if(myRank == 0) call affichePartElem(mail, "infoElems.log")
+  call affichePartTri(mail, "infoTris.log", myRank)
+  
   ! creation du probleme
   call loadFromMesh(pb,mail)
+  
   ! assemblage des matrices elements finis
   call assemblage(pb)
+  
   ! pseudo-elimination des conditions essentielles
   call pelim(pb,mail%refNodes(1))
 
