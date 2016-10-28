@@ -31,25 +31,22 @@ program main
   call MPI_COMM_SIZE(MPI_COMM_WORLD, nbTask, ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, myRank, ierr)
 
-
   write(*,*)
   write(*,*) '  **** TA01 Equation de la chaleur ****  '
 
+  open(unit=11, file="python_res.txt", form='formatted')
 
-  filename = "testpart.msh"
-  write(*,*) trim("./nbSsDomains")//filename
-  open(unit=11, file=trim("./nbSsDomains")//filename, form='formatted')     
-
+  read(11,*) filename
   read(11,*) nbSsDomains
 
   write(*,*)
-  write(*,*) '-----------------------------------------'
+  write(*,*) '_________________________________________'
   write(*,*) 'Nombre de sous-domaines du maillage lu grâce au script Python :'
   write(*,*) nbSsDomains
 
   ! erreur si le nombre de sous-domaines est différent de celui du nombre de processeurs
-  if(nbTask /= nbSsDomains) then
-     if(myRank == 0) then 
+  if(nbTask /= nbSsDomains + 1) then
+     if(myRank == 0) then
         write(*,*) "___________________________________________________________________________________"
         write(*,*) "ERROR : Le nombre de sous-domaines est différent du nombre de processeurs demandés"
         write(*,*) "Le programme va s'arrêter"
@@ -58,33 +55,34 @@ program main
      call MPI_Abort(MPI_COMM_WORLD,errcode,ierr)
   end if
 
-  
+
 
   write(*,*)
-  write(*,*) '-----------------------------------------'
+  write(*,*) '_________________________________________'
   write(*,*) 'Proprietes du maillage :'
 
   ! lecture du maillage
   mail = loadFromMshFile("./testpart.msh", nbSsDomains)
-  
+
   ! construction des donnees sur les triangles
   call getTriangles(mail,  myRank, nbSsDomains)
+
 
   ! Affichage des données des noeuds et des elements
   if(myRank == 0) call affichePartNoeud(mail, "infoNoeuds.log")
   if(myRank == 0) call affichePartElem(mail, "infoElems.log")
   call affichePartTri(mail, "infoTris.log", myRank)
-  
+
   ! creation du probleme
   call loadFromMesh(pb,mail)
-  
+
   ! assemblage des matrices elements finis
   call assemblage(pb)
-  
+
   ! pseudo-elimination des conditions essentielles
   call pelim(pb,mail%refNodes(1))
 
-  write(*,*) '-----------------------------------------'
+  write(*,*) '_________________________________________'
   write(*,*) 'Erreur theorique attendu :'
 
   ! calcul du residu theorique
@@ -94,7 +92,7 @@ program main
   print *, "Erreur theorique=", erreur
 
 
-  write(*,*) '-----------------------------------------'
+  write(*,*) '_________________________________________'
   write(*,*) 'Resolution du systeme lineaire : '
 
   ! Resolution par jacobi
@@ -112,7 +110,7 @@ program main
   end if
 
 
-  write(*,*) '-----------------------------------------'
+  write(*,*) '_________________________________________'
   write(*,*) 'Calcul du residu reel et de l erreur :'
 
   ! calcul du residu
@@ -124,7 +122,7 @@ program main
   erreur=dsqrt(dot_product(pb%uexa-pb%u,pb%uexa-pb%u))
   print *, "||u-uexa||_2=", erreur
 
-  write(*,*) '-----------------------------------------'
+  write(*,*) '_________________________________________'
   write(*,*)
   write(*,*) '      **** Fin du programmme ****'
   write(*,*)

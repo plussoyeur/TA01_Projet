@@ -18,7 +18,7 @@ except IOError:
     sys.exit(1)
 
 
-    
+
 file = open(filename, "r")
 
 while 1:
@@ -41,10 +41,12 @@ for i in range(size):
 nbSsDomains = int(numpy.amax(A))
 print "__________________________________________________"
 print "Le nombre de sous-domaines est :", nbSsDomains
-print "Ce nombre est stocké dans le fichier : " "nbSsDomains"+filename
+print "Ce nombre est stocké dans le fichier : " "python_res.txt"
 print "__________________________________________________"
 
-resultats = open("nbSsDomains" + filename, "w")
+resultats = open("python_res.txt", "w")
+resultats.write(filename)
+resultats.write('\n')
 resultats.write(str(nbSsDomains))
 
 

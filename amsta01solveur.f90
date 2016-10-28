@@ -45,7 +45,11 @@ module amsta01solveur
 
     ! Remplissage et suppresion de M_inv et N
     do i = 1, n_size
-       call setcoeff(M_inv, i, i,  (1.d0)/(coeff(pb%p_Kelim, i, i)))
+       if(coeff(pb%p_Kelim,i,i) /= 0) then
+          call setcoeff(M_inv, i, i,  (1.d0)/(coeff(pb%p_Kelim, i, i)))
+       else
+          call setcoeff(M_inv, i, i, 0d0)
+       end if
     end do
 
 
@@ -93,10 +97,10 @@ module amsta01solveur
 
 
     ! variables locales
-    type(matsparse)                    :: N, M_inv          ! avec K=M-N
-    integer                            :: n_size, k, i      ! taille du vecteur solution, entiers pour les boucles
+    type(matsparse)                     :: N, M_inv          ! avec K=M-N
+    integer                             :: n_size, k, i      ! taille du vecteur solution, entiers pour les boucles
     real(kind=8), dimension(:), pointer :: uk, rk            ! vecteur solution à l'itération k et résidu à l'ordre k
-    real(kind=8)                       :: norm              ! norme du résidu à l'ordre k
+    real(kind=8)                        :: norm              ! norme du résidu à l'ordre k
 
 
     ! initialisation à faux de la variable logique de convergence
@@ -135,6 +139,9 @@ module amsta01solveur
        end if
 
     end do
+
+   ! la solution est la valeur du dernier itéré
+    pb%u = uk
 
   end subroutine solveGaussSeidel
 

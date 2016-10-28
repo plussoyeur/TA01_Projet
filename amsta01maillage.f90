@@ -47,7 +47,7 @@ module amsta01maillage
       if (ios /= 0) then
          stop "ERROR File not opened"
       end if
-      
+
       do while (ios == 0)
          ! lecture de la première ligne
          read(10,*, iostat=ios) sbuf
@@ -170,7 +170,7 @@ module amsta01maillage
          if(res%refNodes(j) < 0) res%refPartNodes(j) = 0
 
       end do
-      
+
       close(10)
 
     end function
@@ -191,20 +191,21 @@ module amsta01maillage
 
 
 
-    
-    
+
+
 
     ! construit la liste des triangles du maillage
-    subroutine getTriangles(mail, myRank, nbSsD)
+    subroutine getTriangles(mail, myRank, nbSsDomaine)
 
       implicit none
 
       type(maillage), intent(inout)   :: mail
-      integer, optional, intent(in)   :: nbSsD
+      integer, optional, intent(in)   :: nbSsDomaine
       integer, intent(in)             :: myRank
-      integer                         :: i, j, k, nbTri_tot, nbSsDomaine
+      integer                         :: i, j, k, nbTri_tot
 
 
+      write(*,*) myRank, "AVANT"
       nbTri_tot   = count(mail%typeElems(:,1) == 2)
       mail%nbTri  = nbTri_tot
       if(myRank == 0) Print*, "NbTri (total) =", mail%nbTri
@@ -212,11 +213,11 @@ module amsta01maillage
       allocate(mail%refTri(mail%nbTri), mail%refPartTri(mail%nbTri,nbSsDomaine))
       allocate(mail%triNbPart(mail%nbTri), mail%tri2elem(mail%nbTri))
 
-
       ! Initialisation du tableau de partition des triangles a 0
       mail%refPartTri = 0
       j = 1
 
+      write(*,*) myRank, "APRES"
       ! Identification des triangles parmis les elements
       boucle_identification_triangle : do i=1,mail%nbElems
 
@@ -244,12 +245,13 @@ module amsta01maillage
       ! non plus au global mais sur chaque processeur consideres et on alloue
       ! le tableau des identifiants des sommets des triangles du processeur
       ! en fonction de cette variable
+
       mail%nbTri = count(mail%refPartTri(:,1) == myRank)
       allocate(mail%triVertices(mail%nbTri,3))
 
       j = 1
 
-      ! Récupération des identifiants des somments 
+      ! Récupération des identifiants des somments
       boucle_triVertices_proc_myRank : do i=1,nbTri_tot
          if (mail%refPartTri(i,1) == myRank) then
             mail%triVertices(j,1:3) = mail%elemsVertices(mail%tri2elem(i),1:3)
@@ -285,7 +287,7 @@ module amsta01maillage
                   k = k+1
                   ! Une fois que le triangle a été attribué à cause de l'un de ces sommets on sort
                   ! ceci pour ne pas compter deux fois un meme triangle
-                  exit 
+                  exit
                end if
             end do
          end do
@@ -294,7 +296,7 @@ module amsta01maillage
 
 
     end subroutine getTriangles
-  
+
 
 
 
@@ -313,7 +315,7 @@ module amsta01maillage
     !! -------------------------------------------------------------- !!
     !! Subroutines d'affichage
     !! -------------------------------------------------------------- !!
-    
+
 
 
     ! Affiche les références des noeuds
@@ -420,7 +422,7 @@ module amsta01maillage
 
          open(unit=15, file=filename_tris, form="formatted")
 
-         nb_tri = shape(mail%refPartTri) 
+         nb_tri = shape(mail%refPartTri)
 
          write(15,*) '!!!! -------- Info tris  -------- !!!!'
          write(15,*)
@@ -439,7 +441,7 @@ module amsta01maillage
 
     end subroutine affichePartTri
 
-    
+
 
 
 end module amsta01maillage

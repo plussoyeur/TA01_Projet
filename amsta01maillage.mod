@@ -1,5 +1,5 @@
 GFORTRAN module version '9' created from amsta01maillage.f90
-MD5:3167c2ed94648afeb51a6f065824e3f9 -- If you edit this, you'll get what you deserve.
+MD5:d5791bb2939c2747ff4b5a16e5363e62 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () () ()
 () () ())
@@ -93,7 +93,7 @@ DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
 DUMMY) (DERIVED 2 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 36 'myrank' '' '' 34 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
-37 'nbssd' '' '' 34 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+37 'nbssdomaine' '' '' 34 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 OPTIONAL DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
 25 'mail' '' '' 24 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
 (DERIVED 2 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)

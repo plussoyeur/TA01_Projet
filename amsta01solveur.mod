@@ -1,5 +1,5 @@
 GFORTRAN module version '9' created from amsta01solveur.f90
-MD5:4326f7de506881eb1a7342336e1daf29 -- If you edit this, you'll get what you deserve.
+MD5:b131ebcb72110e9346ab7add449d0bc9 -- If you edit this, you'll get what you deserve.
 
 (() () (2) (3) (4 5 6 7) () () () () () () () () () () () () () () ()
 () () () () () (8 9) ())
@@ -276,8 +276,8 @@ DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
 (DERIVED 10 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 67 'myrank' '' '' 64 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
-116 'nbssd' '' '' 113 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-OPTIONAL DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+116 'nbssdomaine' '' '' 113 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0
+0 OPTIONAL DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
 66 'filename' '' '' 64 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
 57 'mail' '' '' 56 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)

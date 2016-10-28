@@ -1,0 +1,52 @@
+ !!!! -------- Info tris  -------- !!!!
+
+ Il y a           48  triangles pour le proc            2
+
+ Triangle 'numero' :            1  | triVertices :            1           5          32
+ Triangle 'numero' :            2  | triVertices :           32           5          33
+ Triangle 'numero' :            3  | triVertices :           32          33          31
+ Triangle 'numero' :            4  | triVertices :           31          33          34
+ Triangle 'numero' :            5  | triVertices :           31          34          30
+ Triangle 'numero' :            6  | triVertices :           30          34          35
+ Triangle 'numero' :            7  | triVertices :           30          35           4
+ Triangle 'numero' :            8  | triVertices :            4          35          29
+ Triangle 'numero' :            9  | triVertices :            5           6          33
+ Triangle 'numero' :           10  | triVertices :           33           6          36
+ Triangle 'numero' :           11  | triVertices :           33          36          34
+ Triangle 'numero' :           12  | triVertices :           34          36          37
+ Triangle 'numero' :           13  | triVertices :           34          37          35
+ Triangle 'numero' :           14  | triVertices :           35          37          38
+ Triangle 'numero' :           15  | triVertices :           35          38          29
+ Triangle 'numero' :           16  | triVertices :           29          38          28
+ Triangle 'numero' :           17  | triVertices :            6           7          36
+ Triangle 'numero' :           18  | triVertices :           36           7          39
+ Triangle 'numero' :           19  | triVertices :           36          39          37
+ Triangle 'numero' :           20  | triVertices :           37          39          40
+ Triangle 'numero' :           21  | triVertices :           37          40          38
+ Triangle 'numero' :           22  | triVertices :           38          40          41
+ Triangle 'numero' :           23  | triVertices :           38          41          28
+ Triangle 'numero' :           24  | triVertices :           28          41          27
+ Triangle 'numero' :           25  | triVertices :            7           8          39
+ Triangle 'numero' :           26  | triVertices :           39           8          42
+ Triangle 'numero' :           27  | triVertices :           39          42          40
+ Triangle 'numero' :           28  | triVertices :           40          42          43
+ Triangle 'numero' :           29  | triVertices :           40          43          41
+ Triangle 'numero' :           30  | triVertices :           41          43          44
+ Triangle 'numero' :           31  | triVertices :           41          44          27
+ Triangle 'numero' :           32  | triVertices :           27          44          26
+ Triangle 'numero' :           33  | triVertices :            8           9          42
+ Triangle 'numero' :           34  | triVertices :           42           9          45
+ Triangle 'numero' :           35  | triVertices :           42          45          43
+ Triangle 'numero' :           36  | triVertices :           43          45          46
+ Triangle 'numero' :           37  | triVertices :           43          46          44
+ Triangle 'numero' :           38  | triVertices :           44          46          47
+ Triangle 'numero' :           39  | triVertices :           44          47          26
+ Triangle 'numero' :           40  | triVertices :           26          47          25
+ Triangle 'numero' :           41  | triVertices :            9          10          45
+ Triangle 'numero' :           42  | triVertices :           45          10          48
+ Triangle 'numero' :           43  | triVertices :           45          48          46
+ Triangle 'numero' :           44  | triVertices :           46          48          49
+ Triangle 'numero' :           45  | triVertices :           46          49          47
+ Triangle 'numero' :           46  | triVertices :           10          11          48
+ Triangle 'numero' :           47  | triVertices :           48          11          51
+ Triangle 'numero' :           48  | triVertices :           48          51          49
