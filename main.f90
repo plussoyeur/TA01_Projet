@@ -80,7 +80,8 @@ program main
   call assemblage(pb)
 
   ! pseudo-elimination des conditions essentielles
-  call pelim(pb,mail%refNodes(1))
+  if (myRank /= 0) call pelim(pb,mail%refNodes(1))
+  if (myRank == 0) call pelim(pb,-3)
 
   write(*,*) '_________________________________________'
   write(*,*) 'Erreur theorique attendu :'
