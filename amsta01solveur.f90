@@ -14,7 +14,7 @@ module amsta01solveur
 
   ! calcul de la solution du probleme par Jacobi
   ! on veut resoudre AX = B avec A = M - N où A diag et N tradiag à diag vide
-  subroutine solveJacobi(pb, eps, conv)
+  subroutine solveJacobi(pb, eps, conv, myRank)
 
     implicit none
 
@@ -22,6 +22,7 @@ module amsta01solveur
     ! variables d'entrée et de sortie du problème
     type(probleme), intent(inout)          :: pb     ! problème que l'on veut résoudre
     real, intent(in)                       :: eps    ! critère de précision sur la convergence
+    integer, intent(in)                    :: myRank
     logical, intent(out)                   :: conv   ! variable logique pour tester la convergence
 
     ! variables locales
@@ -67,9 +68,11 @@ module amsta01solveur
        ! sortie de la boucle si on a atteint la convergence
        if(norm < eps) then
           conv = .TRUE.
-          write(*,*)
-          write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
-          write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Jacobi'
+          if (myRank == 0) then 
+             write(*,*)
+             write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
+             write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Jacobi'
+          end if
           exit
        end if
 
@@ -88,13 +91,14 @@ module amsta01solveur
 
   ! calcul de la solution du probleme par Gauss Seidel
   ! on veut resoudre AX = B avec A = M - N où A triang inf et N triang strict sup
-  subroutine solveGaussSeidel(pb, eps, conv)
+  subroutine solveGaussSeidel(pb, eps, conv, myRank)
 
     ! variables d'entrée du problème et de sortie
     type(probleme), intent(inout)     :: pb     ! probleme que l'on veut resoudre
-    real, intent(in)          :: eps    ! critere de convergence
+    real, intent(in)                  :: eps    ! critere de convergence
+    integer, intent(in)               :: myRank
     logical, intent(out)              :: conv   ! variable logique pour tester la convergence
-
+   
 
     ! variables locales
     type(matsparse)                     :: N, M_inv          ! avec K=M-N
@@ -132,9 +136,11 @@ module amsta01solveur
        ! sortie de la boucle si on a atteint la convergence
        if(norm < eps) then
           conv = .TRUE.
-          write(*,*)
-          write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
-          write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss-Seidel'
+          if (myRank == 0) then
+             write(*,*)
+             write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
+             write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss-Seidel'
+          end if
           exit
        end if
 

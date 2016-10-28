@@ -5,16 +5,14 @@ import sys
 import numpy
 
 filename = raw_input("Entrer le fichier mesh dont on veut extraire le nombre de sous-domaines \n")
-print "__________________________________________________"
-print "Le fichier lu est : ",filename
 
 # Test de l'existence du fichier de maillage
 try:
     with open(filename): pass
 except IOError:
-    print "_________________________________________"
-    print "Erreur : le fichier spécifié n'existe pas"
-    print "_________________________________________"
+    print "*************************************************************"
+    print "      ERREUR : le fichier spécifié n'existe pas              "
+    print "*************************************************************"
     sys.exit(1)
 
 
@@ -32,17 +30,18 @@ A = numpy.zeros(shape=(size,1))
 for i in range(size):
     f = file.readline()
     f = numpy.fromstring(f, dtype=int, sep=' ')
-    #f = list(f)
-    #print f
-    #f = [g for g in f if not g.isspace()]
-    #print f
     A[i] = f[6]
 
 nbSsDomains = int(numpy.amax(A))
-print "__________________________________________________"
-print "Le nombre de sous-domaines est :", nbSsDomains
-print "Ce nombre est stocké dans le fichier : " "python_res.txt"
-print "__________________________________________________"
+print "*************************************************************"
+print "**                 INFOS PYTHON                              "
+print "**  Le fichier lu est : ", filename
+print "**  Le nombre de sous-domaines est :", nbSsDomains
+print "**  Ce nombre est stocké dans le fichier : " "python_res.txt"
+print "*************************************************************"
+print
+print
+print
 
 resultats = open("python_res.txt", "w")
 resultats.write(filename)
@@ -54,3 +53,5 @@ resultats.close()
 
 file.close()
 
+# Lancer le programme : mpirun -np nbSsDomains+1 exe
+os.system("mpirun -np {0} exe".format(nbSsDomains+1)) 

@@ -204,8 +204,6 @@ module amsta01maillage
       integer, intent(in)             :: myRank
       integer                         :: i, j, k, nbTri_tot
 
-
-      write(*,*) myRank, "AVANT"
       nbTri_tot   = count(mail%typeElems(:,1) == 2)
       mail%nbTri  = nbTri_tot
       if(myRank == 0) Print*, "NbTri (total) =", mail%nbTri
@@ -217,7 +215,6 @@ module amsta01maillage
       mail%refPartTri = 0
       j = 1
 
-      write(*,*) myRank, "APRES"
       ! Identification des triangles parmis les elements
       boucle_identification_triangle : do i=1,mail%nbElems
 

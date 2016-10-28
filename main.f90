@@ -31,19 +31,27 @@ program main
   call MPI_COMM_SIZE(MPI_COMM_WORLD, nbTask, ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, myRank, ierr)
 
-  write(*,*)
-  write(*,*) '  **** TA01 Equation de la chaleur ****  '
+  if (myRank == 0) then 
+     write(*,*)
+     write(*,*)
+     write(*,*) "*************************************************************"
+     write(*,*) '******           TA01 Equation de la chaleur           ******'
+     write(*,*) "*************************************************************"
+     write(*,*)
+  end if
 
   open(unit=11, file="python_res.txt", form='formatted')
 
   read(11,*) filename
   read(11,*) nbSsDomains
 
-  write(*,*)
-  write(*,*) '_________________________________________'
-  write(*,*) 'Nombre de sous-domaines du maillage lu grâce au script Python :'
-  write(*,*) nbSsDomains
-
+  if (myRank == 0) then
+     write(*,*)
+     write(*,*) '_________________________________________'
+     write(*,*) 'Nombre de sous-domaines du maillage lu grâce au script Python :'
+     write(*,*) nbSsDomains
+  end if
+  
   ! erreur si le nombre de sous-domaines est différent de celui du nombre de processeurs
   if(nbTask /= nbSsDomains + 1) then
      if(myRank == 0) then
@@ -56,11 +64,12 @@ program main
   end if
 
 
-
-  write(*,*)
-  write(*,*) '_________________________________________'
-  write(*,*) 'Proprietes du maillage :'
-
+  if (myRank == 0) then
+     write(*,*)
+     write(*,*) '_________________________________________'
+     write(*,*) 'Proprietes du maillage :'
+  end if
+  
   ! lecture du maillage
   mail = loadFromMshFile("./testpart.msh", nbSsDomains)
 
@@ -83,51 +92,62 @@ program main
   if (myRank /= 0) call pelim(pb,mail%refNodes(1))
   if (myRank == 0) call pelim(pb,-3)
 
-  write(*,*) '_________________________________________'
-  write(*,*) 'Erreur theorique attendu :'
-
+  if (myRank == 0) then
+     write(*,*) '_________________________________________'
+     write(*,*) 'Erreur theorique attendu :'
+  end if
+    
   ! calcul du residu theorique
   allocate(residu(mail%nbNodes))
   residu=pb%felim-pb%p_Kelim*pb%uexa
   erreur=dsqrt(dot_product(residu,residu))
-  print *, "Erreur theorique=", erreur
+  if(myRank == 0) print *, "Erreur theorique=", erreur
 
-
-  write(*,*) '_________________________________________'
-  write(*,*) 'Resolution du systeme lineaire : '
-
+  if (myRank == 0) then
+     write(*,*) '_________________________________________'
+     write(*,*) 'Resolution du systeme lineaire : '
+  end if
+  
   ! Resolution par jacobi
-  call solveJacobi(pb, 0.000001, conv)
+  call solveJacobi(pb, 0.000001, conv, myRank)
 
   ! Resolution par Gauss Seidel
-  !call solveGaussSeidel(pb, 0.000001, conv)
+  !call solveGaussSeidel(pb, 0.000001, conv, myRank)
 
   ! Si on n'a pas converge on utilise une methode directe
   if (conv .eqv. .FALSE.) then
      ! resolution du systeme lineaire
      call solveLU(pb)
-     write(*,*) 'WARNING : Il n y a pas eu convergence de la methode iterative'
-     write(*,*) 'INFO    : Le systeme a ete resolu a l aide d une methode directe LU'
+     if (myRank == 0) then
+        write(*,*) 'WARNING : Il n y a pas eu convergence de la methode iterative'
+        write(*,*) 'INFO    : Le systeme a ete resolu a l aide d une methode directe LU'
+     end if
   end if
 
+  if (myRank == 0) then
+     write(*,*) '_________________________________________'
+     write(*,*) 'Calcul du residu reel et de l erreur :'
+  end if
 
-  write(*,*) '_________________________________________'
-  write(*,*) 'Calcul du residu reel et de l erreur :'
-
+  
   ! calcul du residu
   residu=pb%felim-pb%p_Kelim*pb%u
   erreur=dsqrt(dot_product(residu,residu))
-  print *, "Residu=", erreur
+  if (myRank == 0) then
+     print *, "Residu=", erreur
+  end if
 
   ! calcul de l'erreur L2
   erreur=dsqrt(dot_product(pb%uexa-pb%u,pb%uexa-pb%u))
-  print *, "||u-uexa||_2=", erreur
-
-  write(*,*) '_________________________________________'
-  write(*,*)
-  write(*,*) '      **** Fin du programmme ****'
-  write(*,*)
-
+  if (myRank == 0) then
+     print *, "||u-uexa||_2=", erreur
+     
+     write(*,*) '_________________________________________'
+     write(*,*)
+     write(*,*) '      **** Fin du programmme ****'
+     write(*,*)
+  end if
+  
   ! sauvegarde de la solution et de la solution theorique
   call saveToVtu(pb%mesh,pb%u,pb%uexa)
 
