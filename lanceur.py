@@ -4,8 +4,22 @@ import os
 import sys
 import numpy
 
-filename = raw_input("Entrer le fichier mesh dont on veut extraire le nombre de sous-domaines \n")
 
+if len(sys.argv) > 1:
+    filename = sys.argv[1]
+    
+else:
+
+    filename = raw_input("Entrer le nom du fichier mesh \n")
+
+    # Si jamais filename n'est pas specifie on lui donne testpart.msh
+    # Valeur par defaut pour gagner du temps sur les tests
+    if filename  == "":
+        filename = "testpart.msh"
+
+
+
+        
 # Test de l'existence du fichier de maillage
 try:
     with open(filename): pass

@@ -109,7 +109,7 @@ program main
   end if
   
   ! Resolution par jacobi
-  call solveJacobi(pb, 0.000001, conv, myRank)
+  call solveJacobi(pb, 0.000001, conv, myRank, ierr)
 
   ! Resolution par Gauss Seidel
   !call solveGaussSeidel(pb, 0.000001, conv, myRank)
