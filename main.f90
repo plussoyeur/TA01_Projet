@@ -5,7 +5,7 @@ program main
   use amsta01probleme
   use amsta01solveur
 
-  use mpi
+  !use mpi
 
   implicit none
 
@@ -17,7 +17,7 @@ program main
   real(kind=8)                         :: erreur
   real(kind=8), dimension(:), pointer  :: residu
   logical                              :: conv   ! Indique s'il y a eu convergence pour les methodes iterative
-  integer                              :: nbSsDomains
+  integer                              :: nbSsDomains, i
   character(len=20)                    :: filename
 
   !variables relatives à l'utilisation de mpi
@@ -82,15 +82,18 @@ program main
   if(myRank == 0) call affichePartElem(mail, "infoElems.log")
   call affichePartTri(mail, "infoTris.log", myRank)
 
-  ! creation du probleme
+  ! création du probleme
   call loadFromMesh(pb,mail)
-
+  ! création des tableaux pour les communications utiles dans le solveur 
+  call prepareComm(mail, myRank)
+  call commIntFront(mail, myRank, nbTask, ierr)
+  
   ! assemblage des matrices elements finis
   call assemblage(pb)
 
   ! pseudo-elimination des conditions essentielles
   if (myRank /= 0) call pelim(pb,mail%refNodes(1))
-  if (myRank == 0) call pelim(pb,-3)
+  if (myRank == 0) call pelim(pb,mail%refNodes(1),-3)
 
   if (myRank == 0) then
      write(*,*) '_________________________________________'
@@ -109,7 +112,7 @@ program main
   end if
   
   ! Resolution par jacobi
-  call solveJacobi(pb, 0.000001, conv, myRank, ierr)
+  call solveJacobi(pb, 0.000001, conv, nbSsDomains, myRank, ierr)
 
   ! Resolution par Gauss Seidel
   !call solveGaussSeidel(pb, 0.000001, conv, myRank)
@@ -149,8 +152,12 @@ program main
   end if
   
   ! sauvegarde de la solution et de la solution theorique
-  call saveToVtu(pb%mesh,pb%u,pb%uexa)
-
+  if (myRank == 0) then 
+     call saveToVtu(pb%mesh,pb%u,pb%uexa)
+     do i = 1, size(pb%u)
+        write(*,*) i, pb%u(i) - pb%uexa(i)
+     end do
+  end if
 
 call MPI_Finalize(ierr)
 

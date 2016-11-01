@@ -6,12 +6,15 @@ module amsta01maillage
 
   implicit none
 
+  include 'mpif.h'
+
   type maillage
-    integer :: nbNodes, nbElems, nbTri
+    integer                               :: nbNodes, nbElems, nbTri, nbTriTot
     real(kind=8), dimension(:,:), pointer :: coords
-    integer, dimension(:,:), pointer :: typeElems, elemsVertices, triVertices, elemsPartRef, RefPartTri
-    integer, dimension(:), pointer :: refNodes, refElems, refTri, elemsNbPart, triNbPart, RefPartNodes, tri2elem
-    integer, dimension(:), pointer :: int2glob, intFront2glob
+    integer, dimension(:,:), pointer      :: typeElems, elemsVertices, triVertices, elemsPartRef, RefPartTri, triVerticesTot
+    integer, dimension(:,:), pointer      :: intFront2glob_proc0
+    integer, dimension(:), pointer        :: refNodes, refElems, refTri, elemsNbPart, triNbPart, RefPartNodes, tri2elem
+    integer, dimension(:), pointer        :: int2glob, intFront2glob
   end type
 
 
@@ -207,6 +210,7 @@ module amsta01maillage
 
       nbTri_tot   = count(mail%typeElems(:,1) == 2)
       mail%nbTri  = nbTri_tot
+      mail%nbTriTot = nbTri_tot
       if(myRank == 0) Print*, "NbTri (total) =", mail%nbTri
 
       allocate(mail%refTri(mail%nbTri), mail%refPartTri(mail%nbTri,nbSsDomaine))
@@ -291,8 +295,28 @@ module amsta01maillage
          end do
 
       end if condition_rank_0
+      
+      ! On construit tous les triangles sur le processeur 0
+      ! Ceci pour la representation a la fin
+      condition_constr_pr_repr : if (myRank == 0) then
+         
+         allocate(mail%triVerticesTot(mail%nbTriTot,3))
+         
+         j = 1
+         
+         do i=1,mail%nbElems
+            if (mail%typeElems(i,1) == 2) then
+               
+               mail%triVerticesTot(j,1:3) = mail%elemsVertices(i,1:3)
+               j=j+1
+               
+            end if
+         end do
+         
+      end if condition_constr_pr_repr
+      
 
-
+      
     end subroutine getTriangles
 
 
@@ -390,6 +414,66 @@ module amsta01maillage
 
 
 
+    
+    ! Envoie au processeur 0 les noeuds voisins de l'interface
+    subroutine commIntFront(mail, myRank, nbTask, ierr)
+
+      implicit none
+
+      type(maillage) , intent(inout)      :: mail
+      integer, intent(in)                 :: myRank, nbTask, ierr
+
+      integer, dimension(MPI_STATUS_SIZE) :: status
+      integer, dimension(:), pointer      :: intFront2glob_prov
+      integer                             :: j, size_tab, size_prov
+
+      ! Ici on récpère les tailles de tableau pour savoir lequel est de taille maximale
+      ! On commence par allouer le tableau intFront2glob pour le proc 0 à la taille 0
+      if (myRank == 0)  allocate(mail%intFront2glob(0))
+      
+      ! On récupère alors le max et on le redistribue en même temps sur tous les processeurs
+      call MPI_ALLREDUCE(size(mail%intFront2glob(:)), size_tab, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
+      
+      ! On désalloue le tableau intFront2glob sur le proc 0
+      if (myRank == 0) deallocate(mail%intFront2glob)
+
+      ! Le processeur 0 contient alors tous les tableaux des sous-domaines relatifs aux noeuds voisins de l'interface
+      ! Les autres processeurs envoient leur tableaux au processeur 0
+      condition_proc : if (myRank == 0) then
+
+         ! On alloue le tableau à la bonne taille i.e. : nb de ss-domaines * taille max des tailles des tableaux intFront2Glob sur chaque ss-domaine
+         allocate(mail%intFront2glob_proc0(nbTask-1, size_tab))
+         mail%intFront2glob_proc0 = 0
+
+         ! On récupère les tableaux venant des autres processeurs
+         do j = 1, nbTask-1
+            call MPI_RECV(mail%intFront2glob_proc0(j,:), size_tab, MPI_INTEGER, j, 101, MPI_COMM_WORLD, status, ierr)
+         end do
+
+      else
+
+         ! On définit un tableau provisoire de taille size_tab avec des 0 à la fin si nécessaire
+         ! pour l'envoyer au proc 0 avec la bonne taille
+         allocate(intFront2glob_prov(size_tab))
+         intFront2glob_prov = 0
+         intFront2glob_prov(1:size(mail%intFront2glob(:))) = mail%intFront2glob(:)
+
+         ! Permet de verifier que la subroutine fait bien son travail
+         ! write(*,*)  myRank, ' : size_tab ', size_tab
+         ! write(*,*)  myRank, ' : size(intFront2glob) ', size(mail%intFront2glob(:))
+         ! write(*,*)  myRank, ' : prov ', intFront2glob_prov(:)
+
+         ! Envoi des données des relatifs aux noeuds voisins de la frontière sur les ss-domaines
+         ! au processeur 0
+         call MPI_SEND(intFront2glob_prov(:), size_tab, MPI_INTEGER, 0, 101, MPI_COMM_WORLD, ierr)
+
+         ! On désalloue enfin le tableau provisoire
+         deallocate(intFront2glob_prov)
+
+      end if condition_proc
+
+ 
+    end subroutine commIntFront
 
 
 

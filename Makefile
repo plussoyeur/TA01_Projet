@@ -12,7 +12,7 @@ CURRENTMOD = amsta01maillage
 all: $(EXEC)
 
 amsta01probleme.o: amsta01maillage.mod amsta01sparse.mod
-amsta01solveur.o: amsta01probleme.o amsta01maillage.mod amsta01sparse.mod
+amsta01solveur.o: amsta01probleme.mod amsta01maillage.mod amsta01sparse.mod
 
 main.o: $(MODS)
 

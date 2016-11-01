@@ -52,11 +52,14 @@ module amsta01probleme
          x = pb%mesh%coords(i,1)
          y = pb%mesh%coords(i,2)
 
+         !pb%uexa(i) = x*(6-x)*y*(2-y)
+         !pb%f(i) = 2*(x*(6-x)+y*(2-y))
+         
          pb%uexa(i) = exp((x+y)/8)
          pb%f(i) = exp((x+y)/8)/16
 
          ! g est la restriction de uexa sur le bord
-         if (pb%mesh%refNodes(i) == pb%mesh%refNodes(1) ) then
+         if (pb%mesh%refNodes(i) == 1 .OR. pb%mesh%refNodes(i) == -3) then
             pb%g(i) = pb%uexa(i)
          end if
       end do
@@ -104,33 +107,50 @@ module amsta01probleme
     ! pseudo-élimination des conditions essentielles
     !     pb : problème sur lequel appliquer la pseudo-élimination
     !     id : numéro du domaine de bord
-    subroutine pelim(pb,id)
+    subroutine pelim(pb,id,id2)
+
+      implicit none
+      
       type(probleme), intent(inout) :: pb
       integer, intent(in) :: id
+      integer, intent(in), optional :: id2
+      
       integer, dimension(:), pointer :: indelim
-      integer :: n, nn, i, ii, j
+      integer :: n, nn, i, ii, j, id3
       real(kind=8) :: val
-
+      
       pb%felim=pb%f-spmatvec(pb%p_K,pb%g)
       pb%p_Kelim=pb%p_K
 
       n=pb%mesh%nbNodes
-      nn=count(pb%mesh%refNodes == id)
+
+      if(present(id2)) then 
+         nn=count(pb%mesh%refNodes == id) + count(pb%mesh%refNodes == id2)
+      else
+         nn=count(pb%mesh%refNodes == id)
+      end if
+      
       allocate(indelim(nn))
-      indelim=pack((/ (i, i=1,n) /),pb%mesh%refNodes == id)
+
+      if(present(id2)) then
+         indelim=pack((/ (i, i=1,n) /), pb%mesh%refNodes == id .OR. pb%mesh%refNodes == id2)
+      else
+         indelim=pack((/ (i, i=1,n) /), pb%mesh%refNodes == id)
+      end if
+         
 
       do ii=1,nn
-        i=indelim(ii)
-        val=coeff(pb%p_K,i,i)
-        pb%felim(i)=pb%g(i)*val
-        do j=1,n
-          if (j /= i) then
-            call delcoeff(pb%p_Kelim,i,j)
+         i=indelim(ii)
+         val=coeff(pb%p_K,i,i)
+         pb%felim(i)=pb%g(i)*val
+         do j=1,n
+            if (j /= i) then
+               call delcoeff(pb%p_Kelim,i,j)
             call delcoeff(pb%p_Kelim,j,i)
           end if
         end do
       end do
-    end subroutine pelim
+end subroutine pelim
 
 
 
@@ -257,17 +277,17 @@ module amsta01probleme
       write(19,*) '</Points>'
       write(19,*) '<Cells>'
       write(19,*) '<DataArray type="Int32" Name="connectivity" format="ascii">'
-      do i=1, mesh%nbTri
+      do i=1, mesh%nbTriTot
         write(19,*) mesh%triVertices(i,:)-1
       end do
       write(19,*) '</DataArray>'
       write(19,*) '<DataArray type="Int32" Name="offsets" format="ascii">'
-      do i=1, mesh%nbTri
+      do i=1, mesh%nbTriTot
         write(19,*) 3*i
       end do
       write(19,*) '</DataArray>'
       write(19,*) '<DataArray type="UInt8" Name="types" format="ascii">'
-      do i=1, mesh%nbTri
+      do i=1, mesh%nbTriTot
         write(19,*) 5
       end do
       write(19,*) '</DataArray>'
