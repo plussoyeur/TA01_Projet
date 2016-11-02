@@ -31,7 +31,7 @@ program main
   call MPI_COMM_SIZE(MPI_COMM_WORLD, nbTask, ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, myRank, ierr)
 
-  if (myRank == 0) then 
+  if (myRank == 0) then
      write(*,*)
      write(*,*)
      write(*,*) "*************************************************************"
@@ -51,7 +51,7 @@ program main
      write(*,*) 'Nombre de sous-domaines du maillage lu grâce au script Python :'
      write(*,*) nbSsDomains
   end if
-  
+
   ! erreur si le nombre de sous-domaines est différent de celui du nombre de processeurs
   if(nbTask /= nbSsDomains + 1) then
      if(myRank == 0) then
@@ -69,9 +69,9 @@ program main
      write(*,*) '_________________________________________'
      write(*,*) 'Proprietes du maillage :'
   end if
-  
+
   ! lecture du maillage
-  mail = loadFromMshFile("./testpart.msh", nbSsDomains)
+  mail = loadFromMshFile(filename, nbSsDomains)
 
   ! construction des donnees sur les triangles
   call getTriangles(mail,  myRank, nbSsDomains)

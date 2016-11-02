@@ -52,11 +52,11 @@ module amsta01probleme
          x = pb%mesh%coords(i,1)
          y = pb%mesh%coords(i,2)
 
-         !pb%uexa(i) = x*(6-x)*y*(2-y)
-         !pb%f(i) = 2*(x*(6-x)+y*(2-y))
-         
-         pb%uexa(i) = exp((x+y)/8)
-         pb%f(i) = exp((x+y)/8)/16
+         pb%uexa(i) = x*(6-x)*y*(2-y)
+         pb%f(i) = 2*(x*(6-x)+y*(2-y))
+
+         !pb%uexa(i) = exp((x+y)/8)
+         !pb%f(i) = exp((x+y)/8)/16
 
          ! g est la restriction de uexa sur le bord
          if (pb%mesh%refNodes(i) == 1 .OR. pb%mesh%refNodes(i) == -3) then
@@ -110,26 +110,26 @@ module amsta01probleme
     subroutine pelim(pb,id,id2)
 
       implicit none
-      
+
       type(probleme), intent(inout) :: pb
       integer, intent(in) :: id
       integer, intent(in), optional :: id2
-      
+
       integer, dimension(:), pointer :: indelim
       integer :: n, nn, i, ii, j, id3
       real(kind=8) :: val
-      
+
       pb%felim=pb%f-spmatvec(pb%p_K,pb%g)
       pb%p_Kelim=pb%p_K
 
       n=pb%mesh%nbNodes
 
-      if(present(id2)) then 
+      if(present(id2)) then
          nn=count(pb%mesh%refNodes == id) + count(pb%mesh%refNodes == id2)
       else
          nn=count(pb%mesh%refNodes == id)
       end if
-      
+
       allocate(indelim(nn))
 
       if(present(id2)) then
@@ -137,7 +137,7 @@ module amsta01probleme
       else
          indelim=pack((/ (i, i=1,n) /), pb%mesh%refNodes == id)
       end if
-         
+
 
       do ii=1,nn
          i=indelim(ii)
@@ -249,7 +249,7 @@ end subroutine pelim
       write(19,*) '<VTKFile type="UnstructuredGrid" version="0.1"  byte_order="LittleEndian">'
       write(19,*) '<UnstructuredGrid>'
       n1=computeAttributeFormat("NumberOfPoints",mesh%nbNodes)
-      n2=computeAttributeFormat("NumberOfCells", mesh%nbTri)
+      n2=computeAttributeFormat("NumberOfCells", mesh%nbTriTot)
       write(19,*) '<Piece '//trim(adjustl(n1))//' '//trim(adjustl(n2))//'>'
       write(19,*) '<PointData>'
       write(19,*) '<DataArray type="Float64" Name="u" format="ascii">'
@@ -278,7 +278,7 @@ end subroutine pelim
       write(19,*) '<Cells>'
       write(19,*) '<DataArray type="Int32" Name="connectivity" format="ascii">'
       do i=1, mesh%nbTriTot
-        write(19,*) mesh%triVertices(i,:)-1
+        write(19,*) mesh%triVerticesTot(i,:)-1
       end do
       write(19,*) '</DataArray>'
       write(19,*) '<DataArray type="Int32" Name="offsets" format="ascii">'

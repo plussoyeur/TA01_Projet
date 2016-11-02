@@ -4,9 +4,9 @@
 ! -----------------------------------------------------------------
 module amsta01maillage
 
-  implicit none
+  use mpi
 
-  include 'mpif.h'
+  implicit none
 
   type maillage
     integer                               :: nbNodes, nbElems, nbTri, nbTriTot
@@ -208,9 +208,9 @@ module amsta01maillage
       integer, intent(in)             :: myRank
       integer                         :: i, j, k, nbTri_tot
 
-      nbTri_tot   = count(mail%typeElems(:,1) == 2)
-      mail%nbTri  = nbTri_tot
-      mail%nbTriTot = nbTri_tot
+      nbTri_tot      = count(mail%typeElems(:,1) == 2)
+      mail%nbTri     = nbTri_tot
+      mail%nbTriTot  = nbTri_tot
       if(myRank == 0) Print*, "NbTri (total) =", mail%nbTri
 
       allocate(mail%refTri(mail%nbTri), mail%refPartTri(mail%nbTri,nbSsDomaine))

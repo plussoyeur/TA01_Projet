@@ -5,9 +5,12 @@
 
 module amsta01solveur
 
+  use mpi
   use amsta01maillage
   use amsta01sparse
   use amsta01probleme
+
+  implicit none
 
   contains
 
@@ -17,8 +20,8 @@ module amsta01solveur
   subroutine solveJacobi(pb, eps, conv, nbSsDomaines, myRank, ierr)
 
     !include 'mpif.h'
-    
-    implicit none
+
+    !implicit none
 
     ! variables d'entrée et de sortie du problème
     type(probleme), intent(inout)          :: pb           ! problème que l'on veut résoudre
@@ -26,7 +29,7 @@ module amsta01solveur
     integer, intent(in)                    :: myRank, ierr
     logical, intent(out)                   :: conv         ! variable logique pour tester la convergence
     integer, intent(in)                    :: nbSsDomaines ! Nombre de ss-domaines
-    
+
     ! variables locales
     type(matsparse)                       :: N, M_inv                  ! avec K=M-N
     real(kind=8), dimension(:), pointer   :: uk, rk                    ! itéré kieme de la solution et du résidu
@@ -65,11 +68,11 @@ module amsta01solveur
     allocate(uk_tri(n_size))
     ! on alloue le vecteur uk_prime qui contient les noeuds à envoyer
     allocate(uk_prime(size(pb%mesh%int2glob)))
-    ! On alloue le vecteur uk_sec 
+    ! On alloue le vecteur uk_sec
     if (myRank /= 0) allocate(uk_sec(size(pb%mesh%intFront2glob)))
     if (myRank == 0) allocate(uk_sec(size(pb%mesh%intFront2glob_proc0(1,:))))
 
-    
+
     ! Initialisation du vecteur solution et boucle
     uk = 1.d0
     do k = 1, 5000 ! Pour ne pas avoir de boucle infinie (on pourrait optimiser ce critère sachant que k <= n_size ?)
@@ -88,12 +91,12 @@ module amsta01solveur
        ! on remplit le vecteur uk_prime des noeuds à envoyer grâce à int2glob sur le proc 0 (interface)
        if (myRank == 0) uk_prime(:) = uk(pb%mesh%int2glob(:))
        ! on envoit uk_prime de 0 vers les autres proc
-       call MPI_Bcast(uk_prime, size(uk_prime), MPI_DOUBLE, 0, MPI_COMM_WORLD, ierr)
+       call MPI_Bcast(uk_prime, size(uk_prime), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
        ! on réaffecte chaque noeud de l'interface pour uk sur chaque processeur
        uk(pb%mesh%int2glob(:)) = uk_prime(:)
 
 
-       ! *** 2) Ss-domaines vers interface : 
+       ! *** 2) Ss-domaines vers interface :
 
 
        ! Envoi et réception des noeuds voisins de la frontière grâce aux vecteurs intFront2glob
@@ -101,21 +104,21 @@ module amsta01solveur
        if (myRank == 0) then
           do i = 1, nbSsDomaines
              uk_sec = 0
-             call MPI_RECV(uk_sec, size(uk_sec), MPI_DOUBLE, i, 100, MPI_COMM_WORLD, status, ierr)
+             call MPI_RECV(uk_sec, size(uk_sec), MPI_DOUBLE_PRECISION, i, 100, MPI_COMM_WORLD, status, ierr)
 
              do j = 1, size(pb%mesh%intFront2glob_proc0(i,:))
                 if(pb%mesh%intFront2glob_proc0(i,j) /= 0) then
                    uk(pb%mesh%intFront2glob_proc0(i,j)) = uk_sec(j)
                 end if
              end do
-             
+
           end do
        else
           uk_sec(:) = uk(pb%mesh%intFront2glob(:))
-          call MPI_SEND(uk_sec, size(uk_sec), MPI_DOUBLE, 0, 100, MPI_COMM_WORLD, ierr)
+          call MPI_SEND(uk_sec, size(uk_sec), MPI_DOUBLE_PRECISION, 0, 100, MPI_COMM_WORLD, ierr)
        end if
-       
-       
+
+
        ! *********************************************************
        ! *********************************************************
 
@@ -126,8 +129,8 @@ module amsta01solveur
              end if
           end do
        end if
-         
-       
+
+
        ! *** 3) Calcul du résidu
        rk = pb%felim - pb%p_Kelim * uk         ! spmatvec -> *
 
@@ -138,13 +141,13 @@ module amsta01solveur
        end do
 
        carre_norm = dot_product(rk,rk)
-       call MPI_ALLREDUCE(carre_norm, norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, ierr)
+       call MPI_ALLREDUCE(carre_norm, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
        norm = dsqrt(norm)
-       
+
        ! sortie de la boucle si on a atteint la convergence
        if(norm < eps) then
           conv = .TRUE.
-          if (myRank == 0) then 
+          if (myRank == 0) then
              write(*,*)
              write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
              write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Jacobi'
@@ -160,10 +163,10 @@ module amsta01solveur
     do j = 1, n_size
        if(pb%mesh%refPartNodes(j) /= myRank) uk(j) = 0
     end do
-    
+
     ! On récupère tout sur le processeur 0
-    call MPI_REDUCE(uk, pb%u, n_size, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-    
+    call MPI_REDUCE(uk, pb%u, n_size, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
     ! désallocation des matrices crées
     deallocate(uk, rk)
 
@@ -181,7 +184,7 @@ module amsta01solveur
     real, intent(in)                  :: eps    ! critere de convergence
     integer, intent(in)               :: myRank
     logical, intent(out)              :: conv   ! variable logique pour tester la convergence
-   
+
 
     ! variables locales
     type(matsparse)                     :: N, M_inv          ! avec K=M-N
@@ -229,7 +232,7 @@ module amsta01solveur
 
     end do
 
-    
+
    ! la solution est la valeur du dernier itéré
     pb%u = uk
 
