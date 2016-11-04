@@ -1,2 +1,2 @@
-testpart3.msh
-20
+testpart.msh
+2

@@ -34,12 +34,13 @@ module amsta01maillage
 
 
     ! construit un maillage par lecture d'un fichier gmsh
-    function loadFromMshFile(filename, nbSsDomains) result(res)
+    function loadFromMshFile(filename, myRank, nbSsDomains) result(res)
       implicit none
 
       ! déclaration des variables
       character(len=*), intent(in)   :: filename
       integer, intent(in)            :: nbSsDomains
+      integer, intent(in)            :: myRank
       type(maillage)                 :: res
       integer                        :: ios, ibuf, ibufD, ibufT, i, j, nbtags
       character(len=100)             :: sbuf, sbuf2, sbuf3
@@ -71,7 +72,7 @@ module amsta01maillage
          else if (sbuf =="$Nodes") then
             ! read number of nodes
             read(10,*, iostat=ios) res%nbNodes
-            print*, "nbNodes=",res%nbNodes
+            if( myRank == 0) print*, "nbNodes=",res%nbNodes
             allocate(res%coords(res%nbNodes,3), res%refNodes(res%nbNodes))
             res%refNodes=0
 
@@ -90,7 +91,7 @@ module amsta01maillage
 
          else if (sbuf =="$Elements") then
             read(10,*, iostat=ios) res%nbElems
-            print*, "nbElems=",res%nbElems
+            if( myRank == 0) print*, "nbElems=",res%nbElems
             allocate(res%typeElems(res%nbElems,2), res%refElems(res%nbElems), res%elemsVertices(res%nbElems,3))
             allocate(res%elemsPartRef(res%nbElems,nbSsDomains), res%refPartNodes(res%nbNodes), res%elemsNbPart(res%nbElems))
 

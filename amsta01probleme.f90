@@ -67,13 +67,14 @@ module amsta01probleme
 
 
     ! assemblage des matrices de rigidité et de masse, et du second membre
-    subroutine assemblage(pb)
+    subroutine assemblage(pb, myRank)
       type(probleme), intent(inout) :: pb
-      real(kind=8), dimension(2) :: s1,s2,s3
-      integer, dimension(3) :: s
-      real(kind=8), dimension(9) :: kel, mel
-      integer :: nt, i, j, k
-      real(kind=8) :: x
+      integer, intent(in)           :: myRank
+      real(kind=8), dimension(2)    :: s1,s2,s3
+      integer, dimension(3)         :: s
+      real(kind=8), dimension(9)    :: kel, mel
+      integer                       :: nt, i, j, k
+      real(kind=8)                  :: x
 
       nt=pb%mesh%nbTri
 
@@ -96,6 +97,26 @@ module amsta01probleme
 
       call sort(pb%p_K)
       call sort(pb%p_M)
+
+      ! Elimination des lignes incomplètes
+      if(myRank /= 0) then
+
+         do j = 1, size(pb%mesh%int2glob)
+            do k = 1, pb%mesh%nbNodes
+               call delcoeff(pb%p_K, pb%mesh%int2glob(j), k)
+            end do
+         end do
+
+      else if (myRank ==0) then
+         do i = 1, size(pb%mesh%intFront2glob_proc0(1,:))
+            do j = 1, size(pb%mesh%intFront2glob_proc0(:,1))
+               do k = 1, pb%mesh%nbNodes
+                  call delcoeff(pb%p_K, pb%mesh%intFront2glob_proc0(j,i), k)
+               end do
+            end do
+         end do
+
+      end if
 
       pb%f=spmatvec(pb%p_M,pb%f)
     end subroutine assemblage

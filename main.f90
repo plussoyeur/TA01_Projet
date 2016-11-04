@@ -71,7 +71,7 @@ program main
   end if
 
   ! lecture du maillage
-  mail = loadFromMshFile(filename, nbSsDomains)
+  mail = loadFromMshFile(filename, myRank, nbSsDomains)
 
   ! construction des donnees sur les triangles
   call getTriangles(mail,  myRank, nbSsDomains)
@@ -89,7 +89,7 @@ program main
   call commIntFront(mail, myRank, nbTask, ierr)
 
   ! assemblage des matrices elements finis
-  call assemblage(pb)
+  call assemblage(pb, myRank)
 
   ! pseudo-elimination des conditions essentielles
   if (myRank /= 0) call pelim(pb,mail%refNodes(1),-3)
