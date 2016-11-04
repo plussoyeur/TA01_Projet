@@ -33,7 +33,7 @@ module amsta01solveur
     ! variables locales
     type(matsparse)                       :: N, M_inv                  ! avec K=M-N
     real(kind=8), dimension(:), pointer   :: uk, rk                    ! itéré kieme de la solution et du résidu
-    real(kind=8), dimension(:), pointer   :: uk_prime, uk_sec, uk_tri  ! contient les noeuds à envoyer pour les communications
+    real(kind=8), dimension(:), pointer   :: uk_prime, uk_sec          ! contient les noeuds à envoyer pour les communications
     real(kind=8)                          :: carre_norm, norm          ! norme du résidu
     integer                               :: n_size, i, k, j           ! taille vecteur solution, variables boucles
 
@@ -65,7 +65,6 @@ module amsta01solveur
        end if
     end do
 
-    allocate(uk_tri(n_size))
     ! on alloue le vecteur uk_prime qui contient les noeuds à envoyer
     allocate(uk_prime(size(pb%mesh%int2glob)))
     ! On alloue le vecteur uk_sec
@@ -80,7 +79,6 @@ module amsta01solveur
        ! calcul de l'itéré kieme de la solution
        uk = M_inv * (N * uk) + M_inv * pb%felim    ! spmatvec -> *
 
-       uk_tri = uk
        ! *********************************************************
        ! *********************************************************
        ! COMMUNICATIONS PARALLELLES :
@@ -116,18 +114,6 @@ module amsta01solveur
        else
           uk_sec(:) = uk(pb%mesh%intFront2glob(:))
           call MPI_SEND(uk_sec, size(uk_sec), MPI_DOUBLE_PRECISION, 0, 100, MPI_COMM_WORLD, ierr)
-       end if
-
-
-       ! *********************************************************
-       ! *********************************************************
-
-       if (myRank == 0 .AND. k == 5) then
-          do j=1,n_size
-             if (uk(j) /= uk_tri(j)) then
-                write(*,*) ' Changement pour : ', j
-             end if
-          end do
        end if
 
 

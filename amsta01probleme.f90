@@ -52,11 +52,11 @@ module amsta01probleme
          x = pb%mesh%coords(i,1)
          y = pb%mesh%coords(i,2)
 
-         pb%uexa(i) = x*(6-x)*y*(2-y)
-         pb%f(i) = 2*(x*(6-x)+y*(2-y))
+         !pb%uexa(i) = x*(6-x)*y*(2-y)
+         !pb%f(i) = 2*(x*(6-x)+y*(2-y))
 
-         !pb%uexa(i) = exp((x+y)/8)
-         !pb%f(i) = exp((x+y)/8)/16
+         pb%uexa(i) = exp((x+y)/8)
+         pb%f(i) = exp((x+y)/8)/16
 
          ! g est la restriction de uexa sur le bord
          if (pb%mesh%refNodes(i) == 1 .OR. pb%mesh%refNodes(i) == -3) then

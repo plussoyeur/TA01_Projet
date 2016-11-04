@@ -295,28 +295,28 @@ module amsta01maillage
          end do
 
       end if condition_rank_0
-      
+
       ! On construit tous les triangles sur le processeur 0
       ! Ceci pour la representation a la fin
       condition_constr_pr_repr : if (myRank == 0) then
-         
+
          allocate(mail%triVerticesTot(mail%nbTriTot,3))
-         
+
          j = 1
-         
+
          do i=1,mail%nbElems
             if (mail%typeElems(i,1) == 2) then
-               
+
                mail%triVerticesTot(j,1:3) = mail%elemsVertices(i,1:3)
                j=j+1
-               
+
             end if
          end do
-         
-      end if condition_constr_pr_repr
-      
 
-      
+      end if condition_constr_pr_repr
+
+
+
     end subroutine getTriangles
 
 
@@ -329,7 +329,7 @@ module amsta01maillage
 
 
 
-    
+
     ! Preparation des tableaux necessaires pour les communications
     subroutine prepareComm(mail, myRank)
 
@@ -343,12 +343,12 @@ module amsta01maillage
       integer                         :: j, k, i
       integer, dimension(:), pointer  :: intFront2glob_prov
 
-      ! Recuperation du nombre de noeuds a l'interface 
+      ! Recuperation du nombre de noeuds a l'interface
       nbNodes_Interface = count(mail%RefPartNodes(:) == 0)
 
       ! Allocation du tableau int2glob
       allocate(mail%int2glob(nbNodes_Interface))
-    
+
 
 
       k = 1
@@ -363,10 +363,10 @@ module amsta01maillage
 
 
 
-      if (myRank /= 0) then 
+      if (myRank /= 0) then
 
          allocate(intFront2glob_prov(mail%nbNodes))
-         intFront2glob_prov = 0 
+         intFront2glob_prov = 0
 
          k = 1
 
@@ -394,16 +394,16 @@ module amsta01maillage
          ! dealloue ensuite pour eviter de devoir parcourir deux fois la boucle
          ! precedente etant donne que l'on ne connait pas a priori la taille que doit
          ! prendre le tableau intFront2glob
-         !! -- 
+         !! --
 
          allocate(mail%intFront2glob(count(intFront2glob_prov(:) /= 0)))
          mail%intFront2glob = pack(intFront2glob_prov, intFront2glob_prov /= 0)
 
-         ! Deallocation du tableau provisoire 
+         ! Deallocation du tableau provisoire
          deallocate(intFront2glob_prov)
 
       end if
-  
+
       ! Affichage pour tester la subroutine
       ! if (myRank == 0)  write(*,*) 'intglob : ', mail%int2glob
       ! if (myRank /=0) write(*,*) 'Mon rang : ', myRank, ' intFront2glob : ', mail%intFront2glob
@@ -414,7 +414,7 @@ module amsta01maillage
 
 
 
-    
+
     ! Envoie au processeur 0 les noeuds voisins de l'interface
     subroutine commIntFront(mail, myRank, nbTask, ierr)
 
@@ -430,10 +430,10 @@ module amsta01maillage
       ! Ici on récpère les tailles de tableau pour savoir lequel est de taille maximale
       ! On commence par allouer le tableau intFront2glob pour le proc 0 à la taille 0
       if (myRank == 0)  allocate(mail%intFront2glob(0))
-      
+
       ! On récupère alors le max et on le redistribue en même temps sur tous les processeurs
       call MPI_ALLREDUCE(size(mail%intFront2glob(:)), size_tab, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
-      
+
       ! On désalloue le tableau intFront2glob sur le proc 0
       if (myRank == 0) deallocate(mail%intFront2glob)
 
@@ -472,7 +472,7 @@ module amsta01maillage
 
       end if condition_proc
 
- 
+
     end subroutine commIntFront
 
 
@@ -484,7 +484,7 @@ module amsta01maillage
 
 
 
-    
+
     !! -------------------------------------------------------------- !!
     !! Subroutines d'affichage
     !! -------------------------------------------------------------- !!

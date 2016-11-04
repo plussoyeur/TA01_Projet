@@ -84,22 +84,22 @@ program main
 
   ! création du probleme
   call loadFromMesh(pb,mail)
-  ! création des tableaux pour les communications utiles dans le solveur 
+  ! création des tableaux pour les communications utiles dans le solveur
   call prepareComm(mail, myRank)
   call commIntFront(mail, myRank, nbTask, ierr)
-  
+
   ! assemblage des matrices elements finis
   call assemblage(pb)
 
   ! pseudo-elimination des conditions essentielles
-  if (myRank /= 0) call pelim(pb,mail%refNodes(1))
+  if (myRank /= 0) call pelim(pb,mail%refNodes(1),-3)
   if (myRank == 0) call pelim(pb,mail%refNodes(1),-3)
 
   if (myRank == 0) then
      write(*,*) '_________________________________________'
      write(*,*) 'Erreur theorique attendu :'
   end if
-    
+
   ! calcul du residu theorique
   allocate(residu(mail%nbNodes))
   residu=pb%felim-pb%p_Kelim*pb%uexa
@@ -110,7 +110,7 @@ program main
      write(*,*) '_________________________________________'
      write(*,*) 'Resolution du systeme lineaire : '
   end if
-  
+
   ! Resolution par jacobi
   call solveJacobi(pb, 0.000001, conv, nbSsDomains, myRank, ierr)
 
