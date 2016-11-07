@@ -5,7 +5,6 @@
 
 module amsta01solveur
 
-  use mpi
   use amsta01maillage
   use amsta01sparse
   use amsta01probleme

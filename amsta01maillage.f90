@@ -4,9 +4,11 @@
 ! -----------------------------------------------------------------
 module amsta01maillage
 
-  use mpi
+  !use mpi
 
   implicit none
+
+  include 'mpif.h'
 
   type maillage
     integer                               :: nbNodes, nbElems, nbTri, nbTriTot
