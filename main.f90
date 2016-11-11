@@ -14,7 +14,7 @@ program main
   type(maillage)                       :: mail
   type(probleme)                       :: pb
   type(matsparse)                      :: Kt, Mt
-  real(kind=8)                         :: erreur
+  real(kind=8)                         :: erreur, erreur_comm
   real(kind=8), dimension(:), pointer  :: residu
   logical                              :: conv   ! Indique s'il y a eu convergence pour les methodes iterative
   integer                              :: nbSsDomains, i
@@ -92,19 +92,25 @@ program main
   call assemblage(pb, myRank)
 
   ! pseudo-elimination des conditions essentielles
-  if (myRank /= 0) call pelim(pb,mail%refNodes(1),-3)
-  if (myRank == 0) call pelim(pb,mail%refNodes(1),-3)
+  if (myRank /= 0) call pelim(pb, myRank, mail%refNodes(1), -3)
+  if (myRank == 0) call pelim(pb, myRank, mail%refNodes(1), -3)
 
   if (myRank == 0) then
      write(*,*) '_________________________________________'
      write(*,*) 'Erreur theorique attendu :'
   end if
 
-  ! calcul du residu theorique
+  ! calcul du residu theorique  
   allocate(residu(mail%nbNodes))
-  residu=pb%felim-pb%p_Kelim*pb%uexa
-  erreur=dsqrt(dot_product(residu,residu))
-  if(myRank == 0) print *, "Erreur theorique=", erreur
+  residu = pb%felim - pb%p_Kelim*pb%uexa
+  erreur_comm = dot_product(residu,residu)
+  
+  call MPI_REDUCE(erreur_comm, erreur, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
+  if(myRank == 0) then
+     erreur=dsqrt(erreur)
+     print *, "Erreur theorique=", erreur
+  end if
 
   if (myRank == 0) then
      write(*,*) '_________________________________________'
@@ -112,10 +118,10 @@ program main
   end if
 
   ! Resolution par jacobi
-  call solveJacobi(pb, 0.000001, conv, nbSsDomains, myRank, ierr)
+  ! call solveJacobi(pb, 0.000001, conv, nbSsDomains, myRank, ierr)
 
   ! Resolution par Gauss Seidel
-  !call solveGaussSeidel(pb, 0.000001, conv, myRank)
+    call solveGaussSeidel(pb, 0.000001, conv, myRank, nbSsDomains, ierr)
 
   ! Si on n'a pas converge on utilise une methode directe
   if (conv .eqv. .FALSE.) then
@@ -129,16 +135,9 @@ program main
 
   if (myRank == 0) then
      write(*,*) '_________________________________________'
-     write(*,*) 'Calcul du residu reel et de l erreur :'
+     write(*,*) 'Calcul de l erreur :'
   end if
 
-  
-  ! calcul du residu
-  residu=pb%felim-pb%p_Kelim*pb%u
-  erreur=dsqrt(dot_product(residu,residu))
-  if (myRank == 0) then
-     print *, "Residu=", erreur
-  end if
 
   ! calcul de l'erreur L2
   erreur=dsqrt(dot_product(pb%uexa-pb%u,pb%uexa-pb%u))

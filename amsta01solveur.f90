@@ -11,11 +11,14 @@ module amsta01solveur
 
   implicit none
 
-  contains
+contains
 
 
-  ! calcul de la solution du probleme par Jacobi
-  ! on veut resoudre AX = B avec A = M - N où A diag et N tradiag à diag vide
+  ! *************************************************************************
+  !                            JACOBI
+  ! on veut resoudre AX = B avec A = M - N où A diag et N à diag vide
+  ! *************************************************************************
+
   subroutine solveJacobi(pb, eps, conv, nbSsDomaines, myRank, ierr)
 
     !include 'mpif.h'
@@ -30,11 +33,11 @@ module amsta01solveur
     integer, intent(in)                    :: nbSsDomaines ! Nombre de ss-domaines
 
     ! variables locales
-    type(matsparse)                       :: N, M_inv                  ! avec K=M-N
-    real(kind=8), dimension(:), pointer   :: uk, rk                    ! itéré kieme de la solution et du résidu
-    real(kind=8), dimension(:), pointer   :: uk_prime, uk_sec          ! contient les noeuds à envoyer pour les communications
-    real(kind=8)                          :: carre_norm, norm          ! norme du résidu
-    integer                               :: n_size, i, k, j           ! taille vecteur solution, variables boucles
+    type(matsparse)                       :: N, M_inv                    ! avec K=M-N
+    real(kind=8), dimension(:), pointer   :: uk, rk                      ! itéré kieme de la solution et du résidu
+    real(kind=8), dimension(:), pointer   :: uk_prime, uk_sec            ! contient les noeuds à envoyer pour les communications
+    real(kind=8)                          :: carre_norm, norm, norm_init ! norme du résidu
+    integer                               :: n_size, i, k, j             ! taille vecteur solution, variables boucles
 
     ! variable locale MPI
     integer, dimension(MPI_STATUS_SIZE)   :: status
@@ -59,11 +62,29 @@ module amsta01solveur
     do i = 1, n_size
        if(coeff(pb%p_Kelim,i,i) /= 0) then
           call setcoeff(M_inv, i, i,  (1.d0)/(coeff(pb%p_Kelim, i, i)))
-       else
-          call setcoeff(M_inv, i, i, 0d0)
+       !else
+       !   call setcoeff(M_inv, i, i, 0d0)
+       !end if
        end if
     end do
 
+    ! Initialisation du vecteur solution
+    uk = 0.d0
+
+    ! Vecteur residu initial
+    rk = spmatvec(pb%p_Kelim, uk) - pb%felim
+
+    ! Produit scalaire pour un domaine donne
+    carre_norm = dot_product(rk,rk)
+
+    ! On fait la somme et on redistribue a tout le monde
+    call MPI_ALLREDUCE(carre_norm, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+
+    ! norme intiale
+    norm_init = dsqrt(norm)
+
+    
+    
     ! on alloue le vecteur uk_prime qui contient les noeuds à envoyer
     allocate(uk_prime(size(pb%mesh%int2glob)))
     ! On alloue le vecteur uk_sec
@@ -71,8 +92,7 @@ module amsta01solveur
     if (myRank == 0) allocate(uk_sec(size(pb%mesh%intFront2glob_proc0(1,:))))
 
 
-    ! Initialisation du vecteur solution et boucle
-    uk = 1.d0
+    ! Boucle :
     do k = 1, 5000 ! Pour ne pas avoir de boucle infinie (on pourrait optimiser ce critère sachant que k <= n_size ?)
 
        ! calcul de l'itéré kieme de la solution
@@ -121,19 +141,15 @@ module amsta01solveur
 
        ! Si le sommet n'appartient pas au sous domaine alors on met rk a 0
        ! On pourrait avoir des problemes pour des sommets aux frontieres
-       do j=1,n_size
-          if(pb%mesh%refPartNodes(j) /= myRank) rk(j) = 0
-       end do
-
        carre_norm = dot_product(rk,rk)
        call MPI_ALLREDUCE(carre_norm, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
        norm = dsqrt(norm)
 
        ! sortie de la boucle si on a atteint la convergence
-       if(norm < eps) then
+       if(norm < eps*norm_init) then
           conv = .TRUE.
           if (myRank == 0) then
-             write(*,*)
+             write(*,*) 'INFO    : Residu reel : ', norm
              write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
              write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Jacobi'
           end if
@@ -160,74 +176,201 @@ module amsta01solveur
 
 
 
-  ! calcul de la solution du probleme par Gauss Seidel
-  ! on veut resoudre AX = B avec A = M - N où A triang inf et N triang strict sup
-  subroutine solveGaussSeidel(pb, eps, conv, myRank)
-
-    ! variables d'entrée du problème et de sortie
-    type(probleme), intent(inout)     :: pb     ! probleme que l'on veut resoudre
-    real, intent(in)                  :: eps    ! critere de convergence
-    integer, intent(in)               :: myRank
-    logical, intent(out)              :: conv   ! variable logique pour tester la convergence
 
 
-    ! variables locales
-    type(matsparse)                     :: N, M_inv          ! avec K=M-N
-    integer                             :: n_size, k, i      ! taille du vecteur solution, entiers pour les boucles
-    real(kind=8), dimension(:), pointer :: uk, rk            ! vecteur solution à l'itération k et résidu à l'ordre k
-    real(kind=8)                        :: norm              ! norme du résidu à l'ordre k
 
 
-    ! initialisation à faux de la variable logique de convergence
+
+
+  ! **********************************************************************************
+  !                            GAUSS-SEIDEL
+  ! on veut resoudre AX = B avec A = M - N où M triang inf et N triang sup à diag vide
+  ! **********************************************************************************
+  
+  subroutine solveGaussSeidel(pb, eps, conv, myRank, nbSsDomaine, ierr)
+
+    implicit none
+
+    type(probleme), intent(inout) :: pb
+    real, intent(in)              :: eps
+    logical, intent(out)          :: conv
+    integer, intent(in)           :: myRank, ierr  ! Variables MPI
+    integer, intent(in)           :: nbSsDomaine
+
+    ! Variable locale MPI
+    integer, dimension(MPI_STATUS_SIZE)         :: status
+
+    ! Variables locales
+    type(matsparse)                      :: M, N, Add, AdDp
+    real(kind=8), dimension(:), pointer  :: rk, uk
+    real(kind=8), dimension(:), pointer  :: uk_prime, uk_sec, uk_tri
+    real(kind=8)                         :: norm, norm_init, sum    
+    integer                              :: n_size,i,k,j, errcode
+    logical :: supp
+
+
+
+    ! conv est mise a false par default
     conv = .FALSE.
+    supp = .TRUE.
 
-    ! définition de la taille du problème (avec élimination) à résoudre et allocation des vecteurs uk et rk
+    ! Osn recupere la taille du probleme avec elimination
     n_size = size(pb%felim)
+
+    ! On alloue les valeurs des vecteurs solution et residu
     allocate(uk(n_size), rk(n_size))
 
-    ! définition des matrices M_inv et N
-    call sparse(M_inv, n_size, n_size)
-    call sparse(N, n_size, n_size)
 
-    N = (-1.d0) * extract(pb%p_Kelim, pb%p_Kelim%i < pb%p_Kelim%j)
-    M_inv = extract(pb%p_Kelim, pb%p_Kelim%i >= pb%p_Kelim%j)
+    call spcopy(Add,  pb%p_Kelim)
+    call spcopy(AdDp, pb%p_Kelim) 
 
-    ! algo de descente pour le calcul de uk
-    ! Initialisation du vecteur solution et boucle
-    uk = 1.d0
-    do k = 1, 1000 ! Pour ne pas avoir de boucle infinie (on pourrait optimiser ce critère sachant que k <= n_size ?)
 
-       ! calcul de l'itéré kieme de la solution
-       uk = (N * uk) + pb%felim    ! spmatvec -> *
-       uk = downSolve(M_inv, uk)
-       ! calcul du résidu
-       rk = pb%felim - pb%p_Kelim * uk         ! spmatvec -> *
-       norm = dsqrt(dot_product(rk,rk))
+    boucle_chCol0 : do j=1,n_size
 
-       ! sortie de la boucle si on a atteint la convergence
-       if(norm < eps) then
-          conv = .TRUE.
-          if (myRank == 0) then
-             write(*,*)
-             write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
-             write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss-Seidel'
-          end if
-          exit
+       do i=1,n_size
+          if (coeff(Add,j,i) /= 0) supp = .FALSE.
+       end do
+
+       if (supp .eqv. .TRUE.) then 
+          do i=1,n_size
+             call delcoeff(Add,i,j)
+          end do
+       else
+          do i=1,n_size
+             call delcoeff(AdDp,i,j)
+          end do
        end if
 
+       supp = .TRUE.
+
+    end do boucle_chCol0
+
+    ! Definition des matrices M et N. Attention K = M - N !
+    N = spmatscal(-1.d0, extract(Add, Add%i < Add%j))
+    M = extract(Add, Add%i >= Add%j)
+
+
+
+    ! On enleve les donnees inutiles dans felim
+    do j=1,n_size
+       if(pb%mesh%refPartNodes(j) /= myRank) pb%felim(j) = 0
     end do
 
 
-   ! la solution est la valeur du dernier itéré
-    pb%u = uk
+    ! Initialisation du vecteur solution
+    uk = 0.d0
+
+    ! Vecteur residu initial
+    rk = spmatvec(pb%p_Kelim, uk) - pb%felim
+
+    ! Produit scalaire pour un domaine donne
+    sum = dot_product(rk,rk)
+
+    ! On fait la somme et on redistribue a tout le monde
+    call MPI_ALLREDUCE(sum, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+
+    ! norme intiale
+    norm_init = dsqrt(norm)
+
+
+    ! On alloue le vecteur uk_prime qui contient les noeuds a envoyer
+    allocate(uk_prime(size(pb%mesh%int2glob)))
+
+    ! On alloue le vecteur uk_sec qui contient les noeuds a envoyer
+    if(myRank /= 0) allocate(uk_sec(size(pb%mesh%intFront2glob)))
+    if(myRank == 0) allocate(uk_sec(size(pb%mesh%intFront2glob_proc0(1,:))))
+
+
+
+    ! On preferera faire une boucle do pour ne pas avoir de fuite. On sort avec un exit.
+    do  k = 1,5000
+
+       if (myRank /= 0) then
+
+          ! Iteration de uk
+          uk = spmatvec(N,uk) + pb%felim - spmatvec(AdDp,uk) 
+          uk = downSolve(M,uk,.TRUE.)
+
+
+          uk_sec(:) = uk(pb%mesh%intFront2glob(:))
+          call MPI_SEND(uk_sec, size(pb%mesh%intFront2glob(:)), &
+               MPI_DOUBLE_PRECISION, 0, 100, MPI_COMM_WORLD, ierr)
+
+       else if (myRank == 0) then 
+
+          uk = spmatvec(N,uk) + pb%felim
+
+          do i=1,nbSsDomaine
+
+             uk_sec = 0
+
+             call MPI_RECV(uk_sec, size(uk_sec), &
+                  MPI_DOUBLE_PRECISION, i, 100, MPI_COMM_WORLD, status, ierr)
+
+             do j = 1,size(pb%mesh%intFront2glob_proc0(i,:))
+                if(pb%mesh%intFront2glob_proc0(i,j) /= 0) uk(pb%mesh%intFront2glob_proc0(i,j)) = uk_sec(j)
+             end do
+
+          end do
+
+          ! Alorithme de descente modifié dans notre cas
+          uk = downsolve(M, uk - spmatvec(AdDp,uk),.TRUE., uk, AdDp)
+
+       end if
+
+
+       ! On remplit le vecteur uk_prime des noeuds a envoyer grace à int2glob sur le proc 0 (interface)
+       if(myRank == 0) uk_prime(:) = uk(pb%mesh%int2glob(:))
+       ! on envoit uk_prime de 0 vers les autres proc
+       call MPI_BCAST(uk_prime, size(uk_prime), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+       ! on reaffecte chaque noeud de l'interface pour uk sur chaque processeur
+       if(myRank /= 0) uk(pb%mesh%int2glob(:)) = uk_prime(:)
+
+
+
+       ! Calcul de la norme de du residu pour observer la convergence
+       ! On fait ce calcul toutes les 10 iterations pour aller plus vite. Utile ?
+       if (mod(k,10) == 0) then
+
+          ! Calcul de residu et de la norme
+          rk = spmatvec(pb%p_Kelim, uk) - pb%felim
+
+          ! Produit scalaire pour un domaine donne
+          sum = dot_product(rk,rk)
+
+          ! On fait la somme et on redistribue a tout le monde
+          call MPI_ALLREDUCE(sum, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+
+          ! Calcul de la norme
+          norm = dsqrt(norm)
+
+          ! Si jamais on a atteint le critère de convergence on sort de la boucle
+          if (norm < eps*norm_init) then
+             conv = .TRUE.
+             if(myRank == 0) write(*,*) 'INFO    : Residu reel : ', norm
+             if(myRank == 0) write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
+             if(myRank == 0) write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss Seidel'
+             exit
+          end if
+
+       end if
+    end do
+
+
+    ! On recompose la solution avec les donnees de chaque processeur
+    ! Si le sommet n'appartient pas au sous domaine alors on met uk a 0
+    ! On pourrait avoir des problemes pour des sommets aux frontieres
+    do j=1,n_size
+       if(pb%mesh%refPartNodes(j) /= myRank) uk(j) = 0
+    end do
+
+    ! On recupere tout sur le processeur 0
+    call MPI_REDUCE(uk, pb%u, n_size, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
+    ! On desallocate les matrice creees
+    deallocate(uk,rk,uk_prime,uk_sec)
 
   end subroutine solveGaussSeidel
-
-
-
-
-
-
 
 
 

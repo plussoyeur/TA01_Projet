@@ -56,7 +56,7 @@ module amsta01probleme
          !pb%f(i) = 2*(x*(6-x)+y*(2-y))
 
          pb%uexa(i) = exp((x+y)/8)
-         pb%f(i) = exp((x+y)/8)/16
+         pb%f(i) = exp((x+y)/8)/32
 
          ! g est la restriction de uexa sur le bord
          if (pb%mesh%refNodes(i) == 1 .OR. pb%mesh%refNodes(i) == -3) then
@@ -128,13 +128,14 @@ module amsta01probleme
     ! pseudo-élimination des conditions essentielles
     !     pb : problème sur lequel appliquer la pseudo-élimination
     !     id : numéro du domaine de bord
-    subroutine pelim(pb,id,id2)
+    subroutine pelim(pb, myRank, id, id2)
 
       implicit none
 
       type(probleme), intent(inout) :: pb
-      integer, intent(in) :: id
+      integer, intent(in)           :: id
       integer, intent(in), optional :: id2
+      integer, intent(in)           :: myRank
 
       integer, dimension(:), pointer :: indelim
       integer :: n, nn, i, ii, j, id3
@@ -170,7 +171,14 @@ module amsta01probleme
             call delcoeff(pb%p_Kelim,j,i)
           end if
         end do
-      end do
+     end do
+
+     ! On enleve les donnees inutiles dans felim
+     do j = 1, pb%mesh%nbNodes 
+        if(pb%mesh%refPartNodes(j) /= myRank) pb%felim(j) = 0
+     end do
+
+     
 end subroutine pelim
 
 
