@@ -118,18 +118,14 @@ program main
   end if
 
   ! Resolution par jacobi
-  ! call solveJacobi(pb, 0.000001, conv, nbSsDomains, myRank, ierr)
+  !call solveJacobi(pb, 0.001, conv, nbSsDomains, myRank, ierr)
 
   ! Resolution par Gauss Seidel
-    call solveGaussSeidel(pb, 0.000001, conv, myRank, nbSsDomains, ierr)
+  call solveGaussSeidel(pb, 0.01, conv, myRank, nbSsDomains, ierr)
 
-  ! Si on n'a pas converge on utilise une methode directe
   if (conv .eqv. .FALSE.) then
-     ! resolution du systeme lineaire
-     call solveLU(pb)
      if (myRank == 0) then
         write(*,*) 'WARNING : Il n y a pas eu convergence de la methode iterative'
-        write(*,*) 'INFO    : Le systeme a ete resolu a l aide d une methode directe LU'
      end if
   end if
 

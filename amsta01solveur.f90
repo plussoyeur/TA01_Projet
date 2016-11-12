@@ -202,61 +202,63 @@ contains
 
     ! Variables locales
     type(matsparse)                      :: M, N, Add, AdDp
-    real(kind=8), dimension(:), pointer  :: rk, uk
+    real(kind=8), dimension(:), pointer  :: rk, uk, uk_bis
     real(kind=8), dimension(:), pointer  :: uk_prime, uk_sec, uk_tri
     real(kind=8)                         :: norm, norm_init, sum    
     integer                              :: n_size,i,k,j, errcode
-    logical :: supp
-
+    integer, dimension(:), pointer       :: loc2glob
 
 
     ! conv est mise a false par default
     conv = .FALSE.
-    supp = .TRUE.
 
-    ! Osn recupere la taille du probleme avec elimination
+    ! On recupere la taille du probleme avec elimination
     n_size = size(pb%felim)
 
-    ! On alloue les valeurs des vecteurs solution et residu
+
+    ! On alloue les vecteurs solution et residu
     allocate(uk(n_size), rk(n_size))
+    
+    ! creation du tableau loc2glob qui contient le passage local a global pour tous les processeurs
+    allocate(loc2glob(count(pb%mesh%RefPartNodes(:) == myRank)))
+    loc2glob = pack((/(i, i=1,n_size)/), pb%mesh%RefPartNodes(:) == myRank)
 
 
     call spcopy(Add,  pb%p_Kelim)
-    call spcopy(AdDp, pb%p_Kelim) 
-
-
-    boucle_chCol0 : do j=1,n_size
-
-       do i=1,n_size
-          if (coeff(Add,j,i) /= 0) supp = .FALSE.
-       end do
-
-       if (supp .eqv. .TRUE.) then 
-          do i=1,n_size
-             call delcoeff(Add,i,j)
+    call spcopy(AdDp, pb%p_Kelim)
+    
+    do i = 1, size(loc2glob)
+       
+          do j = 1, n_size
+             if(pb%mesh%RefPartNodes(j) == myRank) then 
+                call delcoeff(AdDp,loc2glob(i),j)
+             else
+                call delcoeff(Add,loc2glob(i),j)
+             end if
           end do
-       else
-          do i=1,n_size
-             call delcoeff(AdDp,i,j)
-          end do
-       end if
-
-       supp = .TRUE.
-
-    end do boucle_chCol0
-
+       
+    end do
+!!$    Affichage de loc2glob et des matrices sparses pour vérification
+!!$    if(myRank == 0) then
+!!$       write(*,*) "Loc2glob"
+!!$       do i = 1, size(loc2glob(:))
+!!$          write(*,*) i, loc2glob(i)
+!!$          write(*,*)
+!!$       end do
+!!$
+!!$       call affiche(AdDp)
+!!$       call affiche(Add)
+!!$    end if
+    
     ! Definition des matrices M et N. Attention K = M - N !
     N = spmatscal(-1.d0, extract(Add, Add%i < Add%j))
     M = extract(Add, Add%i >= Add%j)
 
+    ! Creation d'un vecteur uk_bis pour le proc 0 pour le calcul de la norme
+    if(myRank == 0) allocate(uk_bis(n_size))
+    if(myRank == 0) uk_bis = 0.d0
 
-
-    ! On enleve les donnees inutiles dans felim
-    do j=1,n_size
-       if(pb%mesh%refPartNodes(j) /= myRank) pb%felim(j) = 0
-    end do
-
-
+    
     ! Initialisation du vecteur solution
     uk = 0.d0
 
@@ -266,9 +268,11 @@ contains
     ! Produit scalaire pour un domaine donne
     sum = dot_product(rk,rk)
 
+    
     ! On fait la somme et on redistribue a tout le monde
     call MPI_ALLREDUCE(sum, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
 
+    
     ! norme intiale
     norm_init = dsqrt(norm)
 
@@ -281,15 +285,17 @@ contains
     if(myRank == 0) allocate(uk_sec(size(pb%mesh%intFront2glob_proc0(1,:))))
 
 
-
     ! On preferera faire une boucle do pour ne pas avoir de fuite. On sort avec un exit.
     do  k = 1,5000
 
+       write(*,*) myRank, "iteration", k
+
+       
        if (myRank /= 0) then
 
           ! Iteration de uk
           uk = spmatvec(N,uk) + pb%felim - spmatvec(AdDp,uk) 
-          uk = downSolve(M,uk,.TRUE.)
+          uk = downSolve(M, uk, loc2glob)
 
 
           uk_sec(:) = uk(pb%mesh%intFront2glob(:))
@@ -308,13 +314,19 @@ contains
                   MPI_DOUBLE_PRECISION, i, 100, MPI_COMM_WORLD, status, ierr)
 
              do j = 1,size(pb%mesh%intFront2glob_proc0(i,:))
-                if(pb%mesh%intFront2glob_proc0(i,j) /= 0) uk(pb%mesh%intFront2glob_proc0(i,j)) = uk_sec(j)
+                if(pb%mesh%intFront2glob_proc0(i,j) /= 0) then
+                   uk(pb%mesh%intFront2glob_proc0(i,j)) = uk_sec(j)
+                   uk_bis(pb%mesh%intFront2glob_proc0(i,j)) = uk_sec(j)
+                end if
              end do
 
           end do
+          
 
-          ! Alorithme de descente modifié dans notre cas
-          uk = downsolve(M, uk - spmatvec(AdDp,uk),.TRUE., uk, AdDp)
+          uk = uk - spmatvec(AdDp, uk)
+             
+          ! Alorithme de descente
+          uk = downsolve(M, uk, loc2glob)
 
        end if
 
@@ -333,8 +345,9 @@ contains
        if (mod(k,10) == 0) then
 
           ! Calcul de residu et de la norme
-          rk = spmatvec(pb%p_Kelim, uk) - pb%felim
-
+          if(myRank /= 0) rk = spmatvec(pb%p_Kelim, uk) - pb%felim
+          if(myRank == 0) rk = spmatvec(Add,uk) + spmatvec(AdDp, uk_bis) - pb%felim
+          
           ! Produit scalaire pour un domaine donne
           sum = dot_product(rk,rk)
 
@@ -343,10 +356,12 @@ contains
 
           ! Calcul de la norme
           norm = dsqrt(norm)
+          write(*,*) myRank, norm
 
           ! Si jamais on a atteint le critère de convergence on sort de la boucle
           if (norm < eps*norm_init) then
              conv = .TRUE.
+             call MPI_Barrier(MPI_COMM_WORLD, ierr)
              if(myRank == 0) write(*,*) 'INFO    : Residu reel : ', norm
              if(myRank == 0) write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
              if(myRank == 0) write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss Seidel'

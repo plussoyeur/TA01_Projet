@@ -1087,25 +1087,17 @@ module amsta01sparse
 
     ! fonction de descente pour une matrice triangulaire inférieure
     ! Fonction de descente matrice triangulaire
-    function downSolve(a,y,tronc,uk,mat_b) result(x)
+    function downSolve(a,y,loc2glob) result(x)
 
       implicit none
 
       type(matsparse), intent(in)               :: a
-      type(matsparse), intent(in), optional     :: mat_b
       real(kind=8), dimension(:), intent(in)    :: y
-      real(kind=8), dimension(:), intent(in), optional   :: uk
-      logical, intent(in), optional             :: tronc
+      integer, dimension(:), intent(in)                  :: loc2glob
       real(kind=8), dimension(size(y))          :: x
-      logical                                   :: tronc_bis 
-
+      
       integer :: i,j,ind,n
 
-      ! La variable tronc specifie si on travaille sur des matrices tronquees
-      ! comme lorsque l'on utilise plusieurs processeurs
-
-      if (present(tronc) .eqv. .TRUE.)  tronc_bis = .TRUE.
-      if (present(tronc) .eqv. .FALSE.) tronc_bis = .FALSE.
 
       ! Initialisation de n
       n = size(y)
@@ -1114,37 +1106,24 @@ module amsta01sparse
       x = 0.d0
 
       ! resolution de ax=y
-      do i=1,n
+      do i=1,size(loc2glob)
 
-         if(coeff(a,i,i) /= 0) then
-
-            x(i)=y(i)
-            do j=1,i-1
-               ind=find(a,i,j)
-               if(ind/=0) then
-                  x(i)=x(i)-a%val(ind)*x(j)
-               end if
-            end do
-
-            ind=find(a,i,i)
-            x(i)=x(i)/a%val(ind)
-
-         else if (coeff(a,i,i) == 0 .AND. tronc_bis .eqv. .FALSE.) then
-            write(*,*) 'ERROR  : downSolve - La matrice a n est pas inversible'
-         else if (coeff(a,i,i) == 0 .AND. tronc_bis .eqv. .TRUE.) then
-            x(i) = 0.d0
-            if(present(mat_b) .AND. present(uk)) then 
-               bc : do j=1,n
-                  if (coeff(mat_b,j,i) /= 0) then
-                     x(i) = uk(i)
-                     exit bc
-                  end if
-               end do bc
+         x(loc2glob(i))=y(loc2glob(i))
+         
+         do j=1,loc2glob(i)-1
+            ind=find(a,loc2glob(i),j)
+            if(ind/=0) then
+               x(loc2glob(i))=x(loc2glob(i))-a%val(ind)*x(j)
             end if
-         end if
+         end do
+
+         ind=find(a,loc2glob(i),loc2glob(i))
+         x(loc2glob(i))=x(loc2glob(i))/a%val(ind)
+
       end do
 
-    end function downSolve
+
+ end function downSolve
 
 
     subroutine test_amsta01sparse()
