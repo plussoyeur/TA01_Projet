@@ -287,9 +287,6 @@ contains
 
     ! On preferera faire une boucle do pour ne pas avoir de fuite. On sort avec un exit.
     do  k = 1,5000
-
-       write(*,*) myRank, "iteration", k
-
        
        if (myRank /= 0) then
 
@@ -356,12 +353,10 @@ contains
 
           ! Calcul de la norme
           norm = dsqrt(norm)
-          write(*,*) myRank, norm
 
           ! Si jamais on a atteint le critère de convergence on sort de la boucle
           if (norm < eps*norm_init) then
              conv = .TRUE.
-             call MPI_Barrier(MPI_COMM_WORLD, ierr)
              if(myRank == 0) write(*,*) 'INFO    : Residu reel : ', norm
              if(myRank == 0) write(*,*) 'INFO    : Precision attendue pour la convergence : ', eps
              if(myRank == 0) write(*,*) 'INFO    : Convergence apres ', k, ' iterations de la methode de Gauss Seidel'
